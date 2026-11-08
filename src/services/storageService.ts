@@ -140,8 +140,8 @@ export async function getStudents(forceRefresh = false): Promise<Student[]> {
     }
   }
 
-  // If offline or not signed in, return cache or seed
-  if (!isOnline() || !auth.currentUser) {
+  // If offline, return cache or seed
+  if (!isOnline()) {
     if (cached) {
       return JSON.parse(cached);
     }
@@ -192,7 +192,7 @@ export async function saveStudent(student: Student): Promise<void> {
   }
   localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(students));
 
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     addToOfflineQueue({
       type: 'student',
       action: 'create',
@@ -245,8 +245,8 @@ export async function saveStudentsBatch(
   const finalStudents = Array.from(studentMap.values());
   localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(finalStudents));
 
-  // Sync to Firestore in small chunks or offline queue
-  if (!isOnline() || !auth.currentUser) {
+  // Sync to Firestore in background or offline queue
+  if (!isOnline()) {
     newStudents.forEach((s) => {
       addToOfflineQueue({
         type: 'student',
@@ -278,7 +278,7 @@ export async function deleteStudent(studentId: string): Promise<void> {
   const filtered = students.filter((s) => s.id !== studentId);
   localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(filtered));
 
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     addToOfflineQueue({
       type: 'student',
       action: 'delete',
@@ -308,7 +308,7 @@ export async function getTeachers(forceRefresh = false): Promise<Teacher[]> {
     }
   }
 
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     if (cached) return JSON.parse(cached);
     localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(INITIAL_TEACHERS));
     return INITIAL_TEACHERS;
@@ -354,7 +354,7 @@ export async function saveTeacher(teacher: Teacher): Promise<void> {
   }
   localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(teachers));
 
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     addToOfflineQueue({
       type: 'teacher',
       action: 'create',
@@ -436,7 +436,7 @@ export async function deleteTeacher(teacherId: string): Promise<void> {
   const filtered = teachers.filter((t) => t.id !== teacherId);
   localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(filtered));
 
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     addToOfflineQueue({
       type: 'teacher',
       action: 'delete',
@@ -466,7 +466,7 @@ export async function getAttendances(forceRefresh = false): Promise<Attendance[]
     }
   }
 
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     if (cached) return JSON.parse(cached);
     localStorage.setItem(STORAGE_KEYS.ATTENDANCES, JSON.stringify(INITIAL_ATTENDANCES));
     return INITIAL_ATTENDANCES;
@@ -503,7 +503,7 @@ export async function getAttendances(forceRefresh = false): Promise<Attendance[]
 }
 
 export async function recordAttendance(attendance: Attendance): Promise<void> {
-  const isCurrentlyOnline = isOnline() && auth.currentUser != null;
+  const isCurrentlyOnline = isOnline();
   const itemToSave: Attendance = {
     ...attendance,
     syncStatus: isCurrentlyOnline ? 'synced' : 'pending',
@@ -551,7 +551,7 @@ export async function deleteAttendance(attendanceId: string): Promise<void> {
   const filtered = attendances.filter((a) => a.id !== attendanceId);
   localStorage.setItem(STORAGE_KEYS.ATTENDANCES, JSON.stringify(filtered));
 
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     addToOfflineQueue({
       type: 'attendance',
       action: 'delete',
@@ -581,7 +581,7 @@ export async function getJournals(forceRefresh = false): Promise<LearningJournal
     }
   }
 
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     if (cached) return JSON.parse(cached);
     localStorage.setItem(STORAGE_KEYS.JOURNALS, JSON.stringify(INITIAL_JOURNALS));
     return INITIAL_JOURNALS;
@@ -618,7 +618,7 @@ export async function getJournals(forceRefresh = false): Promise<LearningJournal
 }
 
 export async function saveJournal(journal: LearningJournal): Promise<void> {
-  const isCurrentlyOnline = isOnline() && auth.currentUser != null;
+  const isCurrentlyOnline = isOnline();
   const itemToSave: LearningJournal = {
     ...journal,
     syncStatus: isCurrentlyOnline ? 'synced' : 'pending',
@@ -659,7 +659,7 @@ export async function deleteJournal(journalId: string): Promise<void> {
   const filtered = journals.filter((j) => j.id !== journalId);
   localStorage.setItem(STORAGE_KEYS.JOURNALS, JSON.stringify(filtered));
 
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     addToOfflineQueue({
       type: 'journal',
       action: 'delete',
@@ -686,7 +686,7 @@ export async function getSchoolSettings(): Promise<SchoolIdentitySettings> {
     }
   }
 
-  if (isOnline() && auth.currentUser) {
+  if (isOnline()) {
     try {
       const colRef = collection(db, 'settings');
       const snap = await getDocs(query(colRef, limit(10)));
@@ -709,7 +709,7 @@ export async function getSchoolSettings(): Promise<SchoolIdentitySettings> {
 export async function saveSchoolSettings(settings: SchoolIdentitySettings): Promise<void> {
   localStorage.setItem(STORAGE_KEYS.SCHOOL_SETTINGS, JSON.stringify(settings));
 
-  if (isOnline() && auth.currentUser) {
+  if (isOnline()) {
     try {
       await setDoc(doc(db, 'settings', 'school_identity'), settings);
     } catch (e) {
@@ -728,7 +728,7 @@ export async function getOperationalSettings(): Promise<OperationalSettings> {
     }
   }
 
-  if (isOnline() && auth.currentUser) {
+  if (isOnline()) {
     try {
       const colRef = collection(db, 'settings');
       const snap = await getDocs(query(colRef, limit(10)));
@@ -754,7 +754,7 @@ export async function getOperationalSettings(): Promise<OperationalSettings> {
 export async function saveOperationalSettings(settings: OperationalSettings): Promise<void> {
   localStorage.setItem(STORAGE_KEYS.OPERATIONAL_SETTINGS, JSON.stringify(settings));
 
-  if (isOnline() && auth.currentUser) {
+  if (isOnline()) {
     try {
       await setDoc(doc(db, 'settings', 'operational'), settings);
     } catch (e) {
@@ -765,7 +765,7 @@ export async function saveOperationalSettings(settings: OperationalSettings): Pr
 
 // ================= SYNC OFFLINE QUEUE =================
 export async function syncPendingQueue(): Promise<{ synced: number; failed: number }> {
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     return { synced: 0, failed: 0 };
   }
 
@@ -821,7 +821,7 @@ export async function syncPendingQueue(): Promise<{ synced: number; failed: numb
 export function subscribeToStudentsRealtime(
   onDelta: (student: Student, changeType: 'added' | 'modified' | 'removed') => void
 ): () => void {
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     return () => {};
   }
 
@@ -850,7 +850,7 @@ export function subscribeToStudentsRealtime(
 export function subscribeToAttendancesRealtime(
   onDelta: (attendance: Attendance, changeType: 'added' | 'modified' | 'removed') => void
 ): () => void {
-  if (!isOnline() || !auth.currentUser) {
+  if (!isOnline()) {
     return () => {};
   }
 

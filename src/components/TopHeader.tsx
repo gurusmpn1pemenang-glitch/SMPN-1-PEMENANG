@@ -158,6 +158,30 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             </button>
           )}
 
+          {/* Cloud Firestore Status Badge */}
+          <div
+            className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
+              isOnline
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : 'bg-amber-50 text-amber-850 border-amber-200'
+            }`}
+            title={
+              isOnline
+                ? 'Terhubung ke Firebase Cloud Firestore (ai-studio-sistempresensiju-e915a2ee-fa86-4584-8525-3a5af911ac9b)'
+                : 'Offline - Data disimpan di penyimpanan lokal perangkat'
+            }
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+              }`}
+            />
+            <Database className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="text-[11px] font-bold">
+              {isOnline ? 'Firebase Cloud: Terhubung' : 'Mode Offline'}
+            </span>
+          </div>
+
           {/* Real-time Clock Card */}
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700">
             <Calendar className="w-3.5 h-3.5 text-emerald-600" />

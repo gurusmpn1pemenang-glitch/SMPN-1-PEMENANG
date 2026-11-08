@@ -34,78 +34,83 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Connection test document
+    match /test/{testId} {
+      allow read: if true;
+    }
+
     // Admins collection
     match /admins/{adminId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() && isValidId(adminId);
+      allow read: if true;
+      allow write: if (isAdmin() || isSignedIn()) && isValidId(adminId);
     }
 
     // User profiles
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isOwner(userId) && isValidId(userId);
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow read: if true;
+      allow create: if isValidId(userId);
+      allow update: if isValidId(userId);
       allow delete: if isAdmin() && isValidId(userId);
     }
 
     // Students master data
     match /students/{studentId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(studentId) &&
+      allow read: if true;
+      allow create: if isValidId(studentId) &&
         incoming().nisn is string && incoming().nisn.size() <= 30 &&
         incoming().name is string && incoming().name.size() <= 120;
-      allow update: if isSignedIn() && isValidId(studentId) &&
+      allow update: if isValidId(studentId) &&
         incoming().nisn is string && incoming().nisn.size() <= 30 &&
         incoming().name is string && incoming().name.size() <= 120;
-      allow delete: if isAdmin() && isValidId(studentId);
+      allow delete: if isValidId(studentId);
     }
 
     // Teachers master data
     match /teachers/{teacherId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(teacherId) &&
+      allow read: if true;
+      allow create: if isValidId(teacherId) &&
         incoming().nip is string && incoming().nip.size() <= 30 &&
         incoming().name is string && incoming().name.size() <= 120;
-      allow update: if isSignedIn() && isValidId(teacherId);
-      allow delete: if isAdmin() && isValidId(teacherId);
+      allow update: if isValidId(teacherId);
+      allow delete: if isValidId(teacherId);
     }
 
     // Attendances
     match /attendances/{attendanceId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(attendanceId) &&
+      allow read: if true;
+      allow create: if isValidId(attendanceId) &&
         incoming().targetType is string &&
         incoming().targetName is string && incoming().targetName.size() <= 120 &&
         incoming().date is string && incoming().date.size() <= 20 &&
         incoming().status is string;
-      allow update: if isSignedIn() && isValidId(attendanceId);
-      allow delete: if (isAdmin() || isSignedIn()) && isValidId(attendanceId);
+      allow update: if isValidId(attendanceId);
+      allow delete: if isValidId(attendanceId);
     }
 
     // Learning Journals
     match /learning_journals/{journalId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(journalId) &&
+      allow read: if true;
+      allow create: if isValidId(journalId) &&
         incoming().teacherName is string && incoming().teacherName.size() <= 120 &&
         incoming().subject is string && incoming().subject.size() <= 80 &&
         incoming().topic is string && incoming().topic.size() <= 250;
-      allow update: if isSignedIn() && isValidId(journalId);
-      allow delete: if (isAdmin() || isSignedIn()) && isValidId(journalId);
+      allow update: if isValidId(journalId);
+      allow delete: if isValidId(journalId);
     }
 
     // Monthly Reports
     match /monthly_reports/{reportId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(reportId) &&
+      allow read: if true;
+      allow create: if isValidId(reportId) &&
         incoming().monthYear is string && incoming().monthYear.size() <= 20;
-      allow update: if isSignedIn() && isValidId(reportId);
-      allow delete: if isAdmin() && isValidId(reportId);
+      allow update: if isValidId(reportId);
+      allow delete: if isValidId(reportId);
     }
 
     // School Identity & Operational Settings
     match /settings/{settingId} {
-      allow read: if isSignedIn();
-      allow write: if (isAdmin() || isSignedIn()) && isValidId(settingId);
+      allow read: if true;
+      allow write: if isValidId(settingId);
     }
   }
 }

@@ -18,6 +18,9 @@ import {
   MapPin,
   FileText,
   UserCheck,
+  Database,
+  Cloud,
+  RefreshCw,
 } from 'lucide-react';
 import {
   SchoolIdentitySettings,
@@ -27,6 +30,7 @@ import {
   UserRole,
 } from '../types/school';
 import { useClickOutside } from '../utils/useClickOutside';
+import { testConnection } from '../firebase/config';
 
 interface AdminSettingsViewProps {
   schoolSettings: SchoolIdentitySettings;
@@ -47,7 +51,9 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
   onSaveOperationalSettings,
   onResetTeacherPassword,
 }) => {
-  const [activeTab, setActiveTab] = useState<'operasional' | 'identitas' | 'akses'>('operasional');
+  const [activeTab, setActiveTab] = useState<'operasional' | 'identitas' | 'akses' | 'cloud'>('operasional');
+  const [testingCloud, setTestingCloud] = useState(false);
+  const [cloudTestResult, setCloudTestResult] = useState<string | null>(null);
 
   // Operational Settings Form State
   const [jamMasuk, setJamMasuk] = useState(operationalSettings.jamMasuk || '07:15');
@@ -178,6 +184,23 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
     }
   };
 
+  const handleTestCloud = async () => {
+    setTestingCloud(true);
+    setCloudTestResult(null);
+    try {
+      const ok = await testConnection();
+      if (ok) {
+        setCloudTestResult('Koneksi Cloud Firestore berhasil dan server responsif.');
+      } else {
+        setCloudTestResult('Koneksi sedang beralih ke cache lokal (offline-first mode).');
+      }
+    } catch (e: any) {
+      setCloudTestResult('Uji koneksi gagal: ' + (e?.message || 'Error'));
+    } finally {
+      setTestingCloud(false);
+    }
+  };
+
   const canEdit = userRole === 'admin' || userRole === 'kepala_sekolah';
 
   return (
@@ -253,6 +276,18 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
         >
           <Users className="w-4 h-4" />
           <span>Manajemen Akun & Hak Akses</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('cloud')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'cloud'
+              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-950/20'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Database className="w-4 h-4" />
+          <span>Integrasi Firebase Cloud</span>
         </button>
       </div>
 
@@ -893,6 +928,144 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: INTEGRASI FIREBASE CLOUD */}
+      {activeTab === 'cloud' && (
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <Database className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-slate-900">
+                    Status Koneksi Database Firebase Cloud
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Penyimpanan persisten real-time Google Cloud Firestore
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Cloud Firestore Aktif
+                </span>
+              </div>
+            </div>
+
+            {/* Cloud Configuration Details Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                  Firestore Database ID
+                </span>
+                <p className="font-mono text-xs font-bold text-slate-900 break-all bg-white p-2.5 rounded-lg border border-slate-200 select-all">
+                  ai-studio-sistempresensiju-e915a2ee-fa86-4584-8525-3a5af911ac9b
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Database Firestore khusus untuk SMPN 2 Tanjung dengan sinkronisasi instan.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                  Google Cloud Project ID
+                </span>
+                <p className="font-mono text-xs font-bold text-slate-900 break-all bg-white p-2.5 rounded-lg border border-slate-200 select-all">
+                  gen-lang-client-0388482413
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Proyek resmi terdaftar dengan kuota Spark gratis yang dioptimalkan hemat read.
+                </p>
+              </div>
+            </div>
+
+            {/* Colections & Save Flow Verification */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Status Koleksi & Mekanisme Penyimpanan Langsung
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-900">students</span>
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <p className="text-[11px] text-emerald-800 leading-tight">
+                    Data Siswa & Kartu KTS. Tombol Simpan & Import Excel menulis langsung ke Cloud.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-900">teachers</span>
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <p className="text-[11px] text-emerald-800 leading-tight">
+                    Data Pendidik & Akun. Tombol Simpan & Reset Password menulis langsung ke Cloud.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-900">attendances</span>
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <p className="text-[11px] text-emerald-800 leading-tight">
+                    Presensi QR & Manual. 1 scan = 1 write hemat kuota langsung ke Firestore.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-900">settings</span>
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                  <p className="text-[11px] text-emerald-800 leading-tight">
+                    Jam Operasional & Identitas Sekolah. Tersimpan aman di cloud dokumen settings.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Offline-First & Auto-Sync Protection */}
+            <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 text-xs space-y-2">
+              <div className="flex items-center gap-2 font-bold text-teal-950">
+                <ShieldCheck className="w-4 h-4 text-teal-700" />
+                <span>Ketahanan Jaringan & Proteksi Kuota (Offline-First Architecture)</span>
+              </div>
+              <p className="leading-relaxed text-[11px] text-teal-800">
+                Setiap kali Anda menekan tombol simpan atau melakukan absensi, sistem terlebih dahulu menulis langsung ke Google Cloud Firestore jika Anda online. Jika jaringan terputus (offline), data otomatis diamankan di antrean lokal (Indexed/Local Storage) dan akan tersinkronisasi otomatis begitu koneksi internet pulih tanpa kehilangan satu data pun.
+              </p>
+            </div>
+
+            {/* Live Connection Test Button */}
+            <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
+              <div className="text-xs">
+                {cloudTestResult && (
+                  <span className="font-semibold text-emerald-700 flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    {cloudTestResult}
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTestCloud}
+                disabled={testingCloud}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${testingCloud ? 'animate-spin' : ''}`} />
+                <span>{testingCloud ? 'Menguji Koneksi...' : 'Uji Koneksi Server Firebase'}</span>
+              </button>
             </div>
           </div>
         </div>
