@@ -1,0 +1,7 @@
+{
+  "name": "Sistem Presensi & Jurnal SMPN 2 Tanjung",
+  "description": "Aplikasi presensi QR siswa dan guru, jurnal pembelajaran interaktif, rekap otomatis bulanan, dan ekspor data SMPN 2 Tanjung.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

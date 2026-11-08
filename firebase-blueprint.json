@@ -1,0 +1,309 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin",
+      "description": "Administrator identity mapping",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["email", "role"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role assignment",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "guru", "staf"]
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["email", "name", "role"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student record with unique NISN and QR identifier",
+      "type": "object",
+      "properties": {
+        "nisn": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "gender": {
+          "type": "string",
+          "enum": ["L", "P"]
+        },
+        "className": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "status": {
+          "type": "string",
+          "enum": ["aktif", "mutasi", "lulus"]
+        },
+        "qrCode": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": ["nisn", "name", "gender", "className", "status", "qrCode"]
+    },
+    "Teacher": {
+      "title": "Teacher",
+      "description": "Teacher profile and teaching subject assignment",
+      "type": "object",
+      "properties": {
+        "nip": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "subject": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "status": {
+          "type": "string",
+          "enum": ["aktif", "nonaktif"]
+        },
+        "qrCode": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": ["nip", "name", "subject", "status", "qrCode"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily real-time attendance record for students and teachers",
+      "type": "object",
+      "properties": {
+        "targetType": {
+          "type": "string",
+          "enum": ["siswa", "guru"]
+        },
+        "targetId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "targetName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "nisnOrNip": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "className": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "time": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "status": {
+          "type": "string",
+          "enum": ["hadir", "sakit", "izin", "alpa"]
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "recordedBy": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["targetType", "targetId", "targetName", "nisnOrNip", "date", "time", "status"]
+    },
+    "LearningJournal": {
+      "title": "LearningJournal",
+      "description": "Daily teacher classroom journal record",
+      "type": "object",
+      "properties": {
+        "teacherId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "teacherName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "subject": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "className": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "period": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "topic": {
+          "type": "string",
+          "maxLength": 250
+        },
+        "activities": {
+          "type": "string",
+          "maxLength": 800
+        },
+        "studentAttendanceSummary": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["teacherName", "subject", "className", "date", "period", "topic", "activities"]
+    },
+    "MonthlyReport": {
+      "title": "MonthlyReport",
+      "description": "Monthly evaluation report summary",
+      "type": "object",
+      "properties": {
+        "monthYear": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "className": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "totalStudents": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "averageAttendanceRate": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "hadirCount": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "sakitCount": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "izinCount": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "alpaCount": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "generatedAt": {
+          "type": "string"
+        },
+        "generatedBy": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
+      "required": ["monthYear", "className", "totalStudents", "averageAttendanceRate"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Superadmin mapping collection"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Registered user accounts and teacher/admin roles"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Master student records and QR identifiers"
+    },
+    "/teachers/{teacherId}": {
+      "schema": "Teacher",
+      "description": "Master teacher roster and subjects"
+    },
+    "/attendances/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "Daily real-time attendance records"
+    },
+    "/learning_journals/{journalId}": {
+      "schema": "LearningJournal",
+      "description": "Classroom learning journals submitted by teachers"
+    },
+    "/monthly_reports/{reportId}": {
+      "schema": "MonthlyReport",
+      "description": "Monthly evaluated attendance reports"
+    }
+  }
+}

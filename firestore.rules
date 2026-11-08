@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'gurusmpn1pemenang@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Admins collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && isValidId(adminId);
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(userId) && isValidId(userId);
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // Students master data
+    match /students/{studentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(studentId) &&
+        incoming().nisn is string && incoming().nisn.size() <= 30 &&
+        incoming().name is string && incoming().name.size() <= 120;
+      allow update: if isSignedIn() && isValidId(studentId) &&
+        incoming().nisn is string && incoming().nisn.size() <= 30 &&
+        incoming().name is string && incoming().name.size() <= 120;
+      allow delete: if isAdmin() && isValidId(studentId);
+    }
+
+    // Teachers master data
+    match /teachers/{teacherId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(teacherId) &&
+        incoming().nip is string && incoming().nip.size() <= 30 &&
+        incoming().name is string && incoming().name.size() <= 120;
+      allow update: if isSignedIn() && isValidId(teacherId);
+      allow delete: if isAdmin() && isValidId(teacherId);
+    }
+
+    // Attendances
+    match /attendances/{attendanceId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(attendanceId) &&
+        incoming().targetType is string &&
+        incoming().targetName is string && incoming().targetName.size() <= 120 &&
+        incoming().date is string && incoming().date.size() <= 20 &&
+        incoming().status is string;
+      allow update: if isSignedIn() && isValidId(attendanceId);
+      allow delete: if (isAdmin() || isSignedIn()) && isValidId(attendanceId);
+    }
+
+    // Learning Journals
+    match /learning_journals/{journalId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(journalId) &&
+        incoming().teacherName is string && incoming().teacherName.size() <= 120 &&
+        incoming().subject is string && incoming().subject.size() <= 80 &&
+        incoming().topic is string && incoming().topic.size() <= 250;
+      allow update: if isSignedIn() && isValidId(journalId);
+      allow delete: if (isAdmin() || isSignedIn()) && isValidId(journalId);
+    }
+
+    // Monthly Reports
+    match /monthly_reports/{reportId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(reportId) &&
+        incoming().monthYear is string && incoming().monthYear.size() <= 20;
+      allow update: if isSignedIn() && isValidId(reportId);
+      allow delete: if isAdmin() && isValidId(reportId);
+    }
+
+    // School Identity & Operational Settings
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if (isAdmin() || isSignedIn()) && isValidId(settingId);
+    }
+  }
+}
