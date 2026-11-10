@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import QRCode from 'qrcode';
 import * as XLSX from 'xlsx';
 import {
@@ -21,6 +21,7 @@ import {
   FileUp,
   ExternalLink,
   ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import { Student, Gender, StudentStatus, UserRole } from '../types/school';
 import {
@@ -36,6 +37,7 @@ interface StudentManagerProps {
   onSaveStudent: (student: Student) => Promise<void>;
   onSaveStudentsBatch: (students: Student[]) => Promise<{ added: number; updated: number }>;
   onDeleteStudent: (id: string) => Promise<void>;
+  onDeleteStudentsBatch?: (ids: string[]) => Promise<void>;
   userRole: UserRole;
 }
 
@@ -44,6 +46,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
   onSaveStudent,
   onSaveStudentsBatch,
   onDeleteStudent,
+  onDeleteStudentsBatch,
   userRole,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -115,7 +118,90 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
   const batchPrintModalRef = useRef<HTMLDivElement>(null);
   useClickOutside(batchPrintModalRef, () => setIsBatchPrintOpen(false));
 
-  const classOptions = ['7A', '7B', '8A', '8B', '9A', '9B'];
+  // Bulk Delete Modal States
+  const [isBatchDeleteModalOpen, setIsBatchDeleteModalOpen] = useState(false);
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
+  const [batchDeleteSuccess, setBatchDeleteSuccess] = useState<string | null>(null);
+
+  const batchDeleteModalRef = useRef<HTMLDivElement>(null);
+  useClickOutside(batchDeleteModalRef, () => {
+    if (!isDeletingBatch) {
+      setIsBatchDeleteModalOpen(false);
+    }
+  });
+
+  // Dynamic class options derived from master students data
+  const classOptions = useMemo(() => {
+    const set = new Set(['7A', '7B', '8A', '8B', '9A', '9B']);
+    students.forEach((s) => {
+      if (s.className && s.className.trim()) {
+        set.add(s.className.trim());
+      }
+    });
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [students]);
+
+  // Dynamic student counts per class for dropdown
+  const classCounts = useMemo(() => {
+    const map: { [key: string]: number } = {};
+    students.forEach((s) => {
+      if (s.className) {
+        map[s.className] = (map[s.className] || 0) + 1;
+      }
+    });
+    return map;
+  }, [students]);
+
+  // Detected classes / rombel in the uploaded Excel preview
+  const detectedRombels = useMemo(() => {
+    const counts: { [cls: string]: number } = {};
+    importedPreview.forEach((s) => {
+      const c = s.className || '7A';
+      counts[c] = (counts[c] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) =>
+      a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [importedPreview]);
+
+  // Filter students based on active search term and class filter
+  const filteredStudents = useMemo(() => {
+    return students.filter((s) => {
+      const matchSearch =
+        !searchTerm.trim() ||
+        s.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
+        s.nisn.includes(searchTerm.trim()) ||
+        (s.nis && s.nis.includes(searchTerm.trim()));
+      const matchClass = selectedClass === 'SEMUA' || s.className === selectedClass;
+      return matchSearch && matchClass;
+    });
+  }, [students, searchTerm, selectedClass]);
+
+  // Execute bulk deletion of filtered students
+  const handleExecuteBatchDelete = async () => {
+    if (filteredStudents.length === 0) return;
+    setIsDeletingBatch(true);
+    setBatchDeleteSuccess(null);
+    try {
+      const idsToDelete = filteredStudents.map((s) => s.id);
+      if (onDeleteStudentsBatch) {
+        await onDeleteStudentsBatch(idsToDelete);
+      } else {
+        await Promise.all(idsToDelete.map((id) => onDeleteStudent(id)));
+      }
+      setBatchDeleteSuccess(`Berhasil menghapus ${idsToDelete.length} data siswa secara massal.`);
+      setTimeout(() => {
+        setIsBatchDeleteModalOpen(false);
+        setBatchDeleteSuccess(null);
+      }, 1500);
+    } catch (err: any) {
+      console.error('Error batch deleting students:', err);
+    } finally {
+      setIsDeletingBatch(false);
+    }
+  };
 
   // Generate QR for preview modal
   useEffect(() => {
@@ -257,13 +343,16 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
 
         rawJson.forEach((row, idx) => {
           const rowNum = idx + 2; // header is row 1
-          // Helper to get case-insensitive and flexible key lookup
-          const getVal = (keys: string[]) => {
-            for (const k of keys) {
-              const matchedKey = Object.keys(row).find(
-                (rk) => rk.toLowerCase().trim() === k.toLowerCase().trim()
-              );
-              if (matchedKey && row[matchedKey] !== undefined) {
+          // Helper to get case-insensitive and flexible key lookup with punctuation stripping
+          const getVal = (candidateKeys: string[]) => {
+            const rowKeys = Object.keys(row);
+            for (const ck of candidateKeys) {
+              const cleanCandidate = ck.toLowerCase().replace(/[\s_\-\/\.]/g, '');
+              const matchedKey = rowKeys.find((rk) => {
+                const cleanRk = rk.toLowerCase().replace(/[\s_\-\/\.]/g, '');
+                return cleanRk === cleanCandidate;
+              });
+              if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null) {
                 return String(row[matchedKey]).trim();
               }
             }
@@ -273,7 +362,21 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
           const nisn = getVal(['NISN', 'Nomor NISN']);
           const nis = getVal(['NIS', 'Nomor Induk']);
           const name = getVal(['Nama', 'Nama Siswa', 'Nama Lengkap']);
-          const classNameRaw = getVal(['Kelas', 'Rombel']);
+          const classNameRaw = getVal([
+            'Kelas',
+            'Rombel',
+            'Rombongan Belajar',
+            'Tingkat',
+            'Class',
+            'Nama Kelas',
+            'Kelompok Kelas',
+            'Rombel / Kelas',
+            'Kelas / Rombel',
+            'Tingkat / Kelas',
+            'Kelompok',
+            'Tingkat Rombel',
+            'Nama Rombel',
+          ]);
           const genderRaw = getVal(['Jenis Kelamin', 'JK', 'Gender', 'L/P']).toUpperCase();
           const ttl = getVal(['Tempat & Tanggal Lahir', 'Tempat Tanggal Lahir', 'TTL']);
           const alamat = getVal(['Alamat', 'Alamat Lengkap']);
@@ -291,7 +394,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
           }
 
           const gender: Gender = genderRaw.startsWith('P') || genderRaw === 'PEREMPUAN' ? 'P' : 'L';
-          const className = classNameRaw || '7A';
+          let className = classNameRaw ? classNameRaw.toUpperCase().trim() : '7A';
+          className = className.replace(/^(KELAS|ROMBEL)\s+/i, '').trim();
+          if (!className) className = '7A';
 
           parsedList.push({
             id: `std_imp_${nisn}_${Date.now()}`,
@@ -348,16 +453,6 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
       setIsImporting(false);
     }
   };
-
-  // Filter students
-  const filteredStudents = students.filter((s) => {
-    const matchSearch =
-      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.nisn.includes(searchTerm) ||
-      (s.nis && s.nis.includes(searchTerm));
-    const matchClass = selectedClass === 'SEMUA' || s.className === selectedClass;
-    return matchSearch && matchClass;
-  });
 
   const canEdit = userRole === 'admin' || userRole === 'kepala_sekolah';
 
@@ -450,23 +545,42 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
           />
         </div>
 
-        {/* Class Filter Dropdown with Auto-Close */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <span className="text-xs font-bold text-slate-600">Filter Kelas:</span>
-          <ClassDropdown
-            selectedClass={selectedClass}
-            onSelectClass={setSelectedClass}
-            classList={classOptions}
-            counts={{
-              '7A': students.filter((s) => s.className === '7A').length,
-              '7B': students.filter((s) => s.className === '7B').length,
-              '8A': students.filter((s) => s.className === '8A').length,
-              '8B': students.filter((s) => s.className === '8B').length,
-              '9A': students.filter((s) => s.className === '9A').length,
-              '9B': students.filter((s) => s.className === '9B').length,
-            }}
-            allLabel={`Semua Kelas (${students.length})`}
-          />
+        {/* Class Filter Dropdown and Bulk Delete Button */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-600">Filter Kelas:</span>
+            <ClassDropdown
+              selectedClass={selectedClass}
+              onSelectClass={setSelectedClass}
+              classList={classOptions}
+              counts={classCounts}
+              allLabel={`Semua Kelas (${students.length})`}
+            />
+          </div>
+
+          {/* Bulk Delete Button matching Active Filter / Search */}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setIsBatchDeleteModalOpen(true)}
+              disabled={filteredStudents.length === 0}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                filteredStudents.length === 0
+                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                  : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-300 shadow-2xs active:scale-95'
+              }`}
+              title="Hapus massal seluruh siswa yang tampil pada hasil pencarian / filter ini"
+            >
+              <Trash2 className="w-4 h-4 text-rose-600" />
+              <span>
+                Hapus Massal (
+                {searchTerm || selectedClass !== 'SEMUA'
+                  ? `${filteredStudents.length} Terfilter`
+                  : `${filteredStudents.length} Siswa`}
+                )
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -674,15 +788,41 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
 
               {/* Preview Table */}
               {importedPreview.length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-slate-700">
                       Pratinjau Data ({importedPreview.length} Siswa Terbaca):
                     </span>
                     <span className="text-[11px] text-slate-500">
-                      Siap dimasukkan ke basis data
+                      Siap dimasukkan ke basis data & cloud
                     </span>
                   </div>
+
+                  {/* Detected Classes / Rombels Banner */}
+                  {detectedRombels.length > 0 && (
+                    <div className="p-3 bg-emerald-50/90 border border-emerald-200 rounded-xl space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-emerald-900 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                          Rombel / Kelas Terdeteksi ({detectedRombels.length} Kelas):
+                        </span>
+                        <span className="text-[10px] text-emerald-700 font-medium">
+                          Otomatis sinkron ke grafik & analitik kehadiran
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {detectedRombels.map(([clsName, count]) => (
+                          <span
+                            key={clsName}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-[11px] font-bold shadow-2xs"
+                          >
+                            <span>Kelas {clsName}</span>
+                            <span className="text-emerald-600 font-normal">({count} siswa)</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="border border-slate-200 rounded-lg max-h-56 overflow-y-auto">
                     <table className="w-full text-left text-xs">
@@ -1341,6 +1481,138 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
               >
                 <Printer className="w-4 h-4" />
                 <span>Cetak Lembar KTS</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL 5: BULK DELETE CONFIRMATION ================= */}
+      {isBatchDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div
+            ref={batchDeleteModalRef}
+            className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95"
+          >
+            {/* Modal Header */}
+            <div className="p-4 bg-rose-700 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-rose-200" />
+                <h3 className="font-bold text-sm">Konfirmasi Hapus Siswa Massal</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isDeletingBatch) setIsBatchDeleteModalOpen(false);
+                }}
+                disabled={isDeletingBatch}
+                className="text-rose-200 hover:text-white p-1 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 flex-1 overflow-y-auto space-y-4">
+              {batchDeleteSuccess ? (
+                <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center gap-3 text-emerald-800 text-xs font-bold animate-in fade-in">
+                  <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span>{batchDeleteSuccess}</span>
+                </div>
+              ) : (
+                <>
+                  <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                    <div className="text-xs text-rose-900 space-y-1">
+                      <p className="font-bold">
+                        Peringatan: Tindakan ini bersifat permanen!
+                      </p>
+                      <p className="text-rose-700 leading-relaxed">
+                        Data siswa yang sesuai dengan filter pencarian aktif di bawah ini akan dihapus dari sistem dan cloud Firestore secara massal.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Summary of active filters */}
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2">
+                    <div className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">
+                      Ringkasan Target Penghapusan:
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-white p-2 rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-400 block font-semibold">Pencarian Teks</span>
+                        <span className="font-bold text-slate-800 truncate block">
+                          {searchTerm.trim() ? `"${searchTerm.trim()}"` : 'Semua (Tanpa kata kunci)'}
+                        </span>
+                      </div>
+                      <div className="bg-white p-2 rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-400 block font-semibold">Filter Kelas</span>
+                        <span className="font-bold text-slate-800 truncate block">
+                          {selectedClass === 'SEMUA' ? 'Semua Kelas' : `Kelas ${selectedClass}`}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-lg border border-rose-200 flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700">Total Siswa yang akan dihapus:</span>
+                      <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 font-extrabold text-sm font-mono">
+                        {filteredStudents.length} Siswa
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Student List Preview */}
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-bold text-slate-700">
+                      Daftar Siswa Terfilter ({filteredStudents.length} Siswa):
+                    </span>
+                    <div className="border border-slate-200 rounded-xl max-h-48 overflow-y-auto divide-y divide-slate-100 text-xs">
+                      {filteredStudents.slice(0, 50).map((s, idx) => (
+                        <div key={s.id} className="p-2 flex items-center justify-between hover:bg-slate-50">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-slate-400 w-5 text-right">{idx + 1}.</span>
+                            <div>
+                              <div className="font-bold text-slate-800">{s.name}</div>
+                              <div className="text-[10px] text-slate-400 font-mono">NISN: {s.nisn}</div>
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-[10px]">
+                            {s.className}
+                          </span>
+                        </div>
+                      ))}
+                      {filteredStudents.length > 50 && (
+                        <div className="p-2 text-center text-[11px] text-slate-400 italic bg-slate-50">
+                          ... dan {filteredStudents.length - 50} siswa lainnya
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsBatchDeleteModalOpen(false)}
+                disabled={isDeletingBatch}
+                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteBatchDelete}
+                disabled={isDeletingBatch || filteredStudents.length === 0 || !!batchDeleteSuccess}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-rose-700 hover:bg-rose-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>
+                  {isDeletingBatch
+                    ? 'Sedang Menghapus...'
+                    : `Hapus Permanen ${filteredStudents.length} Siswa`}
+                </span>
               </button>
             </div>
           </div>

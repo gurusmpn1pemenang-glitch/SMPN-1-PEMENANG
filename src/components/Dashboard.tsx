@@ -56,8 +56,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Journals today
   const todayJournals = journals.filter((j) => j.date === todayStr);
 
-  // Group attendance per class
-  const classList = ['7A', '7B', '8A', '8B', '9A', '9B'];
+  // Group attendance per class dynamically based on registered and imported students
+  const dynamicClasses = Array.from(
+    new Set(
+      students
+        .map((s) => s.className?.trim())
+        .filter((c): c is string => Boolean(c && c.length > 0))
+    )
+  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+  const classList = dynamicClasses.length > 0 ? dynamicClasses : ['7A', '7B', '8A', '8B', '9A', '9B'];
   const classStats = classList.map((cls) => {
     const classTotal = students.filter((s) => s.className === cls).length;
     const classAtt = todayStudentAtts.filter((a) => a.className === cls);

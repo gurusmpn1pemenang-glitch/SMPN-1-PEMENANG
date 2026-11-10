@@ -15,6 +15,7 @@ import {
   saveStudent,
   saveStudentsBatch,
   deleteStudent,
+  deleteStudentsBatch,
   getTeachers,
   saveTeacher,
   resetTeacherPassword,
@@ -36,6 +37,9 @@ import {
   syncPendingQueue,
   subscribeToStudentsRealtime,
   subscribeToAttendancesRealtime,
+  subscribeToTeachersRealtime,
+  subscribeToJournalsRealtime,
+  subscribeToSettingsRealtime,
 } from './services/storageService';
 import { DEFAULT_SCHOOL_INFO } from './utils/exportUtils';
 import { Sidebar } from './components/Sidebar';
@@ -170,6 +174,44 @@ export default function App() {
       });
     });
 
+    const unsubTeachers = subscribeToTeachersRealtime((teacherDelta, changeType) => {
+      setTeachers((prev) => {
+        if (changeType === 'removed') {
+          return prev.filter((t) => t.id !== teacherDelta.id);
+        }
+        const idx = prev.findIndex((t) => t.id === teacherDelta.id);
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = teacherDelta;
+          return copy;
+        }
+        return [teacherDelta, ...prev];
+      });
+    });
+
+    const unsubJournals = subscribeToJournalsRealtime((journalDelta, changeType) => {
+      setJournals((prev) => {
+        if (changeType === 'removed') {
+          return prev.filter((j) => j.id !== journalDelta.id);
+        }
+        const idx = prev.findIndex((j) => j.id === journalDelta.id);
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = journalDelta;
+          return copy;
+        }
+        return [journalDelta, ...prev];
+      });
+    });
+
+    const unsubSettings = subscribeToSettingsRealtime((type, data) => {
+      if (type === 'identity' && data) {
+        setSchoolSettings((prev) => ({ ...prev, ...data }));
+      } else if (type === 'operational' && data) {
+        setOperationalSettings((prev) => ({ ...prev, ...data }));
+      }
+    });
+
     // Online / Offline Listeners
     const handleOnline = () => {
       setIsOnline(true);
@@ -187,6 +229,9 @@ export default function App() {
       unsubscribeAuth();
       unsubStudents();
       unsubAttendances();
+      unsubTeachers();
+      unsubJournals();
+      unsubSettings();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -233,6 +278,13 @@ export default function App() {
 
   const handleDeleteStudent = async (id: string) => {
     await deleteStudent(id);
+    const updated = await getStudents();
+    setStudents(updated);
+    updateQueueCount();
+  };
+
+  const handleDeleteStudentsBatch = async (ids: string[]) => {
+    await deleteStudentsBatch(ids);
     const updated = await getStudents();
     setStudents(updated);
     updateQueueCount();
@@ -481,6 +533,7 @@ export default function App() {
                   onSaveStudent={handleSaveStudent}
                   onSaveStudentsBatch={handleSaveStudentsBatch}
                   onDeleteStudent={handleDeleteStudent}
+                  onDeleteStudentsBatch={handleDeleteStudentsBatch}
                   userRole={currentUser?.role || 'guru'}
                 />
               )}

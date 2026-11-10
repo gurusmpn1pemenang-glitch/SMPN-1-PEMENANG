@@ -129,40 +129,39 @@ export const clearOfflineQueue = () => {
 // ================= STUDENTS =================
 export async function getStudents(forceRefresh = false): Promise<Student[]> {
   const cached = localStorage.getItem(STORAGE_KEYS.STUDENTS);
-  if (!forceRefresh && cached) {
+  let localStudents: Student[] = [];
+  if (cached) {
     try {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        localStudents = parsed;
       }
     } catch {
-      // ignore
+      localStudents = [];
     }
   }
 
-  // If offline, return cache or seed
+  // If offline, return cached data immediately
   if (!isOnline()) {
-    if (cached) {
-      return JSON.parse(cached);
-    }
-    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_STUDENTS));
-    return INITIAL_STUDENTS;
+    return localStudents.length > 0 ? localStudents : INITIAL_STUDENTS;
   }
 
+  // When online, fetch fresh master data from Cloud Firestore to sync across all devices
   try {
     const colRef = collection(db, 'students');
-    const snapshot = await getDocs(query(colRef, limit(100)));
+    const snapshot = await getDocs(query(colRef, limit(150)));
 
     if (snapshot.empty) {
-      for (const s of INITIAL_STUDENTS) {
+      const seedList = localStudents.length > 0 ? localStudents : INITIAL_STUDENTS;
+      for (const s of seedList) {
         try {
           await setDoc(doc(db, 'students', s.id), s);
         } catch {
           // ignore seeding fail
         }
       }
-      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_STUDENTS));
-      return INITIAL_STUDENTS;
+      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(seedList));
+      return seedList;
     }
 
     const students: Student[] = [];
@@ -174,11 +173,7 @@ export async function getStudents(forceRefresh = false): Promise<Student[]> {
     return students;
   } catch (error) {
     console.warn('Falling back to local students:', error);
-    if (cached) {
-      return JSON.parse(cached);
-    }
-    localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_STUDENTS));
-    return INITIAL_STUDENTS;
+    return localStudents.length > 0 ? localStudents : INITIAL_STUDENTS;
   }
 }
 
@@ -294,40 +289,78 @@ export async function deleteStudent(studentId: string): Promise<void> {
   }
 }
 
+/**
+ * Bulk delete multiple students based on active search or filter criteria
+ */
+export async function deleteStudentsBatch(studentIds: string[]): Promise<number> {
+  if (studentIds.length === 0) return 0;
+  const idSet = new Set(studentIds);
+  const students = await getStudents();
+  const remaining = students.filter((s) => !idSet.has(s.id));
+  localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(remaining));
+
+  if (!isOnline()) {
+    studentIds.forEach((id) => {
+      addToOfflineQueue({
+        type: 'student',
+        action: 'delete',
+        data: { id },
+      });
+    });
+    return studentIds.length;
+  }
+
+  // Parallel delete in batches from Cloud Firestore
+  await Promise.all(
+    studentIds.map((id) =>
+      deleteDoc(doc(db, 'students', id)).catch((err) => {
+        addToOfflineQueue({
+          type: 'student',
+          action: 'delete',
+          data: { id },
+        });
+        console.warn('Queued student deletion due to network error:', err);
+      })
+    )
+  );
+
+  return studentIds.length;
+}
+
 // ================= TEACHERS =================
 export async function getTeachers(forceRefresh = false): Promise<Teacher[]> {
   const cached = localStorage.getItem(STORAGE_KEYS.TEACHERS);
-  if (!forceRefresh && cached) {
+  let localTeachers: Teacher[] = [];
+  if (cached) {
     try {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        localTeachers = parsed;
       }
     } catch {
-      // ignore
+      localTeachers = [];
     }
   }
 
   if (!isOnline()) {
-    if (cached) return JSON.parse(cached);
-    localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(INITIAL_TEACHERS));
-    return INITIAL_TEACHERS;
+    return localTeachers.length > 0 ? localTeachers : INITIAL_TEACHERS;
   }
 
   try {
     const colRef = collection(db, 'teachers');
-    const snapshot = await getDocs(query(colRef, limit(50)));
+    const snapshot = await getDocs(query(colRef, limit(100)));
 
     if (snapshot.empty) {
-      for (const t of INITIAL_TEACHERS) {
+      const seedList = localTeachers.length > 0 ? localTeachers : INITIAL_TEACHERS;
+      for (const t of seedList) {
         try {
           await setDoc(doc(db, 'teachers', t.id), t);
         } catch {
           // ignore
         }
       }
-      localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(INITIAL_TEACHERS));
-      return INITIAL_TEACHERS;
+      localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(seedList));
+      return seedList;
     }
 
     const teachers: Teacher[] = [];
@@ -338,9 +371,7 @@ export async function getTeachers(forceRefresh = false): Promise<Teacher[]> {
     return teachers;
   } catch (error) {
     console.warn('Falling back to local teachers:', error);
-    if (cached) return JSON.parse(cached);
-    localStorage.setItem(STORAGE_KEYS.TEACHERS, JSON.stringify(INITIAL_TEACHERS));
-    return INITIAL_TEACHERS;
+    return localTeachers.length > 0 ? localTeachers : INITIAL_TEACHERS;
   }
 }
 
@@ -455,37 +486,37 @@ export async function deleteTeacher(teacherId: string): Promise<void> {
 // ================= ATTENDANCES =================
 export async function getAttendances(forceRefresh = false): Promise<Attendance[]> {
   const cached = localStorage.getItem(STORAGE_KEYS.ATTENDANCES);
-  if (!forceRefresh && cached) {
+  let localList: Attendance[] = [];
+  if (cached) {
     try {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        localList = parsed;
       }
     } catch {
-      // ignore
+      localList = [];
     }
   }
 
   if (!isOnline()) {
-    if (cached) return JSON.parse(cached);
-    localStorage.setItem(STORAGE_KEYS.ATTENDANCES, JSON.stringify(INITIAL_ATTENDANCES));
-    return INITIAL_ATTENDANCES;
+    return localList.length > 0 ? localList : INITIAL_ATTENDANCES;
   }
 
   try {
     const colRef = collection(db, 'attendances');
-    const snapshot = await getDocs(query(colRef, limit(200)));
+    const snapshot = await getDocs(query(colRef, limit(300)));
 
     if (snapshot.empty) {
-      for (const a of INITIAL_ATTENDANCES) {
+      const seedList = localList.length > 0 ? localList : INITIAL_ATTENDANCES;
+      for (const a of seedList) {
         try {
           await setDoc(doc(db, 'attendances', a.id), a);
         } catch {
           // ignore
         }
       }
-      localStorage.setItem(STORAGE_KEYS.ATTENDANCES, JSON.stringify(INITIAL_ATTENDANCES));
-      return INITIAL_ATTENDANCES;
+      localStorage.setItem(STORAGE_KEYS.ATTENDANCES, JSON.stringify(seedList));
+      return seedList;
     }
 
     const list: Attendance[] = [];
@@ -496,9 +527,7 @@ export async function getAttendances(forceRefresh = false): Promise<Attendance[]
     return list;
   } catch (error) {
     console.warn('Falling back to local attendances:', error);
-    if (cached) return JSON.parse(cached);
-    localStorage.setItem(STORAGE_KEYS.ATTENDANCES, JSON.stringify(INITIAL_ATTENDANCES));
-    return INITIAL_ATTENDANCES;
+    return localList.length > 0 ? localList : INITIAL_ATTENDANCES;
   }
 }
 
@@ -570,37 +599,37 @@ export async function deleteAttendance(attendanceId: string): Promise<void> {
 // ================= LEARNING JOURNALS =================
 export async function getJournals(forceRefresh = false): Promise<LearningJournal[]> {
   const cached = localStorage.getItem(STORAGE_KEYS.JOURNALS);
-  if (!forceRefresh && cached) {
+  let localList: LearningJournal[] = [];
+  if (cached) {
     try {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        localList = parsed;
       }
     } catch {
-      // ignore
+      localList = [];
     }
   }
 
   if (!isOnline()) {
-    if (cached) return JSON.parse(cached);
-    localStorage.setItem(STORAGE_KEYS.JOURNALS, JSON.stringify(INITIAL_JOURNALS));
-    return INITIAL_JOURNALS;
+    return localList.length > 0 ? localList : INITIAL_JOURNALS;
   }
 
   try {
     const colRef = collection(db, 'learning_journals');
-    const snapshot = await getDocs(query(colRef, limit(100)));
+    const snapshot = await getDocs(query(colRef, limit(150)));
 
     if (snapshot.empty) {
-      for (const j of INITIAL_JOURNALS) {
+      const seedList = localList.length > 0 ? localList : INITIAL_JOURNALS;
+      for (const j of seedList) {
         try {
           await setDoc(doc(db, 'learning_journals', j.id), j);
         } catch {
           // ignore
         }
       }
-      localStorage.setItem(STORAGE_KEYS.JOURNALS, JSON.stringify(INITIAL_JOURNALS));
-      return INITIAL_JOURNALS;
+      localStorage.setItem(STORAGE_KEYS.JOURNALS, JSON.stringify(seedList));
+      return seedList;
     }
 
     const list: LearningJournal[] = [];
@@ -611,9 +640,7 @@ export async function getJournals(forceRefresh = false): Promise<LearningJournal
     return list;
   } catch (error) {
     console.warn('Falling back to local journals:', error);
-    if (cached) return JSON.parse(cached);
-    localStorage.setItem(STORAGE_KEYS.JOURNALS, JSON.stringify(INITIAL_JOURNALS));
-    return INITIAL_JOURNALS;
+    return localList.length > 0 ? localList : INITIAL_JOURNALS;
   }
 }
 
@@ -678,32 +705,36 @@ export async function deleteJournal(journalId: string): Promise<void> {
 // ================= SCHOOL IDENTITY & OPERATIONAL SETTINGS =================
 export async function getSchoolSettings(): Promise<SchoolIdentitySettings> {
   const cached = localStorage.getItem(STORAGE_KEYS.SCHOOL_SETTINGS);
+  let localSettings: SchoolIdentitySettings = DEFAULT_SCHOOL_INFO;
   if (cached) {
     try {
-      return JSON.parse(cached);
+      localSettings = JSON.parse(cached);
     } catch {
-      // ignore
+      localSettings = DEFAULT_SCHOOL_INFO;
     }
   }
 
-  if (isOnline()) {
-    try {
-      const colRef = collection(db, 'settings');
-      const snap = await getDocs(query(colRef, limit(10)));
-      for (const d of snap.docs) {
-        if (d.id === 'school_identity') {
-          const data = d.data() as SchoolIdentitySettings;
-          localStorage.setItem(STORAGE_KEYS.SCHOOL_SETTINGS, JSON.stringify(data));
-          return data;
-        }
+  if (!isOnline()) {
+    return localSettings;
+  }
+
+  try {
+    const colRef = collection(db, 'settings');
+    const snap = await getDocs(query(colRef, limit(10)));
+    for (const d of snap.docs) {
+      if (d.id === 'school_identity') {
+        const data = d.data() as SchoolIdentitySettings;
+        localStorage.setItem(STORAGE_KEYS.SCHOOL_SETTINGS, JSON.stringify(data));
+        return data;
       }
-    } catch (e) {
-      console.warn('Could not fetch cloud school settings:', e);
     }
+    // Seed default if empty in cloud
+    await setDoc(doc(db, 'settings', 'school_identity'), localSettings);
+    return localSettings;
+  } catch (e) {
+    console.warn('Could not fetch cloud school settings:', e);
+    return localSettings;
   }
-
-  localStorage.setItem(STORAGE_KEYS.SCHOOL_SETTINGS, JSON.stringify(DEFAULT_SCHOOL_INFO));
-  return DEFAULT_SCHOOL_INFO;
 }
 
 export async function saveSchoolSettings(settings: SchoolIdentitySettings): Promise<void> {
@@ -720,35 +751,36 @@ export async function saveSchoolSettings(settings: SchoolIdentitySettings): Prom
 
 export async function getOperationalSettings(): Promise<OperationalSettings> {
   const cached = localStorage.getItem(STORAGE_KEYS.OPERATIONAL_SETTINGS);
+  let localSettings: OperationalSettings = DEFAULT_OPERATIONAL_SETTINGS;
   if (cached) {
     try {
-      return JSON.parse(cached);
+      localSettings = JSON.parse(cached);
     } catch {
-      // ignore
+      localSettings = DEFAULT_OPERATIONAL_SETTINGS;
     }
   }
 
-  if (isOnline()) {
-    try {
-      const colRef = collection(db, 'settings');
-      const snap = await getDocs(query(colRef, limit(10)));
-      for (const d of snap.docs) {
-        if (d.id === 'operational') {
-          const data = d.data() as OperationalSettings;
-          localStorage.setItem(STORAGE_KEYS.OPERATIONAL_SETTINGS, JSON.stringify(data));
-          return data;
-        }
+  if (!isOnline()) {
+    return localSettings;
+  }
+
+  try {
+    const colRef = collection(db, 'settings');
+    const snap = await getDocs(query(colRef, limit(10)));
+    for (const d of snap.docs) {
+      if (d.id === 'operational') {
+        const data = d.data() as OperationalSettings;
+        localStorage.setItem(STORAGE_KEYS.OPERATIONAL_SETTINGS, JSON.stringify(data));
+        return data;
       }
-    } catch (e) {
-      console.warn('Could not fetch cloud operational settings:', e);
     }
+    // Seed default if empty in cloud
+    await setDoc(doc(db, 'settings', 'operational'), localSettings);
+    return localSettings;
+  } catch (e) {
+    console.warn('Could not fetch cloud operational settings:', e);
+    return localSettings;
   }
-
-  localStorage.setItem(
-    STORAGE_KEYS.OPERATIONAL_SETTINGS,
-    JSON.stringify(DEFAULT_OPERATIONAL_SETTINGS)
-  );
-  return DEFAULT_OPERATIONAL_SETTINGS;
 }
 
 export async function saveOperationalSettings(settings: OperationalSettings): Promise<void> {
@@ -863,6 +895,82 @@ export function subscribeToAttendancesRealtime(
         snapshot.docChanges().forEach((change) => {
           const attData = change.doc.data() as Attendance;
           onDelta(attData, change.type);
+        });
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, path);
+      }
+    );
+    return unsubscribe;
+  } catch {
+    return () => {};
+  }
+}
+
+export function subscribeToTeachersRealtime(
+  onDelta: (teacher: Teacher, changeType: 'added' | 'modified' | 'removed') => void
+): () => void {
+  if (!isOnline()) return () => {};
+  const path = 'teachers';
+  try {
+    const colRef = collection(db, path);
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          onDelta(change.doc.data() as Teacher, change.type);
+        });
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, path);
+      }
+    );
+    return unsubscribe;
+  } catch {
+    return () => {};
+  }
+}
+
+export function subscribeToJournalsRealtime(
+  onDelta: (journal: LearningJournal, changeType: 'added' | 'modified' | 'removed') => void
+): () => void {
+  if (!isOnline()) return () => {};
+  const path = 'learning_journals';
+  try {
+    const colRef = collection(db, path);
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          onDelta(change.doc.data() as LearningJournal, change.type);
+        });
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, path);
+      }
+    );
+    return unsubscribe;
+  } catch {
+    return () => {};
+  }
+}
+
+export function subscribeToSettingsRealtime(
+  onUpdate: (type: 'identity' | 'operational', data: any) => void
+): () => void {
+  if (!isOnline()) return () => {};
+  const path = 'settings';
+  try {
+    const colRef = collection(db, path);
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.doc.id === 'school_identity') {
+            onUpdate('identity', change.doc.data());
+          } else if (change.doc.id === 'operational') {
+            onUpdate('operational', change.doc.data());
+          }
         });
       },
       (error) => {
