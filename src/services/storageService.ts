@@ -17,6 +17,8 @@ import {
   LearningJournal,
   SchoolIdentitySettings,
   OperationalSettings,
+  Gender,
+  StudentStatus,
 } from '../types/school';
 import {
   INITIAL_STUDENTS,
@@ -177,7 +179,48 @@ export async function getStudents(forceRefresh = false): Promise<Student[]> {
   }
 }
 
-export async function saveStudent(student: Student): Promise<void> {
+/**
+ * Sanitizes student payload before sending to Firestore, ensuring no field is `undefined`
+ * (Firestore throws an error if any field is undefined).
+ * Specifically converts parentPhone, phone, nis, etc. to clean string "" if undefined or null.
+ */
+export function sanitizeStudentForFirestore(student: Partial<Student>): Student {
+  const cleanStr = (val: unknown): string => {
+    if (val === undefined || val === null) return '';
+    return String(val).trim();
+  };
+
+  const nisn = cleanStr(student.nisn);
+  const parentPhone = cleanStr(student.parentPhone ?? student.phone);
+  const photo = cleanStr(student.drivePhotoUrl ?? student.photoUrl);
+
+  const sanitized: Student = {
+    id: cleanStr(student.id) || `std_${Date.now()}`,
+    nisn,
+    nis: cleanStr(student.nis),
+    name: cleanStr(student.name),
+    gender: (student.gender === 'P' ? 'P' : 'L') as Gender,
+    className: cleanStr(student.className) || '7A',
+    birthPlaceDate: cleanStr(student.birthPlaceDate),
+    parentName: cleanStr(student.parentName),
+    parentPhone: parentPhone,
+    phone: parentPhone,
+    address: cleanStr(student.address),
+    drivePhotoUrl: photo,
+    photoUrl: photo,
+    status: (student.status || 'aktif') as StudentStatus,
+    qrCode: cleanStr(student.qrCode) || `SMPN2TJ-SISWA-${nisn}`,
+    createdAt: cleanStr(student.createdAt) || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return sanitized;
+}
+
+export async function saveStudent(rawStudent: Student): Promise<void> {
+  // Sanitize student data to ensure parentPhone and other fields are never undefined
+  const student = sanitizeStudentForFirestore(rawStudent);
+
   const students = await getStudents();
   const existingIdx = students.findIndex((s) => s.id === student.id || s.nisn === student.nisn);
   if (existingIdx >= 0) {
@@ -197,7 +240,7 @@ export async function saveStudent(student: Student): Promise<void> {
   }
 
   try {
-    await setDoc(doc(db, 'students', student.id), student);
+    await setDoc(doc(db, 'students', student.id), student, { merge: true });
   } catch (error) {
     addToOfflineQueue({
       type: 'student',
@@ -214,6 +257,8 @@ export async function saveStudent(student: Student): Promise<void> {
 export async function saveStudentsBatch(
   newStudents: Student[]
 ): Promise<{ added: number; updated: number }> {
+  // Sanitize all incoming student payloads to guarantee no undefined fields
+  const sanitizedStudents = newStudents.map((s) => sanitizeStudentForFirestore(s));
   const currentStudents = await getStudents();
   let added = 0;
   let updated = 0;
@@ -221,7 +266,7 @@ export async function saveStudentsBatch(
   const studentMap = new Map<string, Student>();
   currentStudents.forEach((s) => studentMap.set(s.nisn, s));
 
-  newStudents.forEach((ns) => {
+  sanitizedStudents.forEach((ns) => {
     if (studentMap.has(ns.nisn)) {
       const existing = studentMap.get(ns.nisn)!;
       studentMap.set(ns.nisn, {
@@ -242,7 +287,7 @@ export async function saveStudentsBatch(
 
   // Sync to Firestore in background or offline queue
   if (!isOnline()) {
-    newStudents.forEach((s) => {
+    sanitizedStudents.forEach((s) => {
       addToOfflineQueue({
         type: 'student',
         action: 'create',
@@ -252,8 +297,8 @@ export async function saveStudentsBatch(
   } else {
     // Write in background
     Promise.all(
-      newStudents.map((s) =>
-        setDoc(doc(db, 'students', s.id), s).catch((err) => {
+      sanitizedStudents.map((s) =>
+        setDoc(doc(db, 'students', s.id), s, { merge: true }).catch((err) => {
           addToOfflineQueue({
             type: 'student',
             action: 'create',
@@ -826,7 +871,8 @@ export async function syncPendingQueue(): Promise<{ synced: number; failed: numb
         }
       } else if (item.type === 'student') {
         if (item.action === 'create' || item.action === 'update') {
-          await setDoc(doc(db, 'students', item.data.id), item.data);
+          const sanitizedStudent = sanitizeStudentForFirestore(item.data);
+          await setDoc(doc(db, 'students', item.data.id), sanitizedStudent, { merge: true });
         } else if (item.action === 'delete') {
           await deleteDoc(doc(db, 'students', item.data.id));
         }
