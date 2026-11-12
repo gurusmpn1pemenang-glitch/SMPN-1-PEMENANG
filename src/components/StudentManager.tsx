@@ -27,6 +27,7 @@ import { Student, Gender, StudentStatus, UserRole } from '../types/school';
 import {
   exportStudentsToExcel,
   downloadStudentImportTemplate,
+  exportKtsBatchToPdf,
   DEFAULT_SCHOOL_INFO,
 } from '../utils/exportUtils';
 import { useClickOutside } from '../utils/useClickOutside';
@@ -244,6 +245,25 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
     }
   };
 
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  // Directly download mass KTS .pdf file matching active name and class filter
+  const handleDirectDownloadKtsPdf = async () => {
+    if (filteredStudents.length === 0) return;
+    setIsDownloadingPdf(true);
+    try {
+      await exportKtsBatchToPdf(filteredStudents, {
+        filterClass: selectedClass,
+        searchTerm: searchTerm,
+        qrMap: batchQrCodes,
+      });
+    } catch (err) {
+      console.error('Error generating KTS PDF:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   const handleOpenAdd = () => {
     setEditingStudent(null);
     setFormData({
@@ -353,15 +373,51 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                 return cleanRk === cleanCandidate;
               });
               if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null) {
-                return String(row[matchedKey]).trim();
+                let val = String(row[matchedKey]).trim();
+                // Clean trailing floating point notation from Excel numbers e.g. "123456.0" -> "123456"
+                val = val.replace(/\.0+$/, '').trim();
+                return val;
               }
             }
             return '';
           };
 
-          const nisn = getVal(['NISN', 'Nomor NISN']);
-          const nis = getVal(['NIS', 'Nomor Induk']);
-          const name = getVal(['Nama', 'Nama Siswa', 'Nama Lengkap']);
+          const nisnRaw = getVal([
+            'NISN',
+            'Nomor NISN',
+            'No NISN',
+            'No. NISN',
+            'NISN Siswa',
+            'NISN / NIPD',
+            'NISN/NIPD',
+            'Nomor Induk Siswa Nasional',
+            'No Peserta Didik',
+            'Nomor Peserta Didik',
+            'NISN/NIS',
+            'NISN / NIS',
+          ]);
+          const nis = getVal([
+            'NIS',
+            'Nomor Induk',
+            'No Induk',
+            'No. Induk',
+            'NIPD',
+            'Nomor Induk Siswa',
+            'No. Induk Siswa',
+            'NIS Lokal',
+            'NIPD / NIS',
+            'NIPD/NIS',
+          ]);
+          const name = getVal([
+            'Nama',
+            'Nama Siswa',
+            'Nama Lengkap',
+            'Nama Peserta Didik',
+            'Peserta Didik',
+            'Nama Murid',
+            'Nama Siswa/i',
+            'Nama Anak',
+          ]);
           const classNameRaw = getVal([
             'Kelas',
             'Rombel',
@@ -376,30 +432,116 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
             'Kelompok',
             'Tingkat Rombel',
             'Nama Rombel',
+            'Tingkat Pendidikan',
+            'Kelas Saat Ini',
+            'Rombel Saat Ini',
           ]);
-          const genderRaw = getVal(['Jenis Kelamin', 'JK', 'Gender', 'L/P']).toUpperCase();
-          const ttl = getVal(['Tempat & Tanggal Lahir', 'Tempat Tanggal Lahir', 'TTL']);
-          const alamat = getVal(['Alamat', 'Alamat Lengkap']);
-          const noHpOrtu = getVal(['No HP Orang Tua', 'HP Orang Tua', 'No Telepon', 'Telepon Ortu']);
-          const namaOrtu = getVal(['Nama Orang Tua', 'Orang Tua', 'Wali']);
-          const drivePhoto = getVal(['Link Drive Foto Siswa', 'Link Foto', 'Foto']);
+          const genderRaw = getVal([
+            'Jenis Kelamin',
+            'JK',
+            'Gender',
+            'L/P',
+            'J.K.',
+            'Sex',
+            'Kelamin',
+          ]).toUpperCase();
 
-          if (!nisn) {
-            errors.push(`Baris ${rowNum}: Kolom NISN kosong`);
+          // Handle single combined TTL column or separate Tempat & Tanggal Lahir columns
+          const tempatLahir = getVal(['Tempat Lahir', 'Tempat']);
+          const tanggalLahir = getVal(['Tanggal Lahir', 'Tgl Lahir', 'Tanggal', 'Tgl. Lahir']);
+          let ttl = getVal(['Tempat & Tanggal Lahir', 'Tempat Tanggal Lahir', 'TTL', 'Tempat, Tanggal Lahir']);
+          if (!ttl && (tempatLahir || tanggalLahir)) {
+            ttl = [tempatLahir, tanggalLahir].filter(Boolean).join(', ');
+          }
+
+          const alamat = getVal([
+            'Alamat',
+            'Alamat Lengkap',
+            'Alamat Tempat Tinggal',
+            'Alamat Siswa',
+            'Alamat Peserta Didik',
+            'Dusun',
+            'Desa/Kelurahan',
+            'Desa',
+            'Kelurahan',
+          ]);
+          const noHpOrtu = getVal([
+            'No HP Orang Tua',
+            'HP Orang Tua',
+            'No Telepon',
+            'Telepon Ortu',
+            'No HP',
+            'Nomor HP',
+            'No. HP',
+            'No. HP Ortu',
+            'No Telp',
+            'Telepon',
+            'HP',
+            'Nomor Telepon',
+            'No. Telepon',
+            'Kontak Ortu',
+            'No WA',
+            'WhatsApp',
+          ]);
+          const namaOrtu = getVal([
+            'Nama Orang Tua',
+            'Orang Tua',
+            'Wali',
+            'Nama Ayah',
+            'Nama Ibu',
+            'Nama Wali',
+            'Orang Tua / Wali',
+            'Nama Orang Tua / Wali',
+            'Nama Ayah/Ibu',
+            'Ayah/Ibu',
+          ]);
+          const drivePhoto = getVal([
+            'Link Drive Foto Siswa',
+            'Link Foto',
+            'Foto',
+            'Link Foto Siswa',
+            'URL Foto',
+            'Foto Siswa',
+            'Link Drive',
+            'Link',
+          ]);
+
+          // If row is completely empty (e.g. blank rows at the end of Excel), skip silently
+          if (!name && !nisnRaw && !nis && !classNameRaw) {
             return;
           }
+
+          // If name is missing, skip and log error
           if (!name) {
-            errors.push(`Baris ${rowNum}: Kolom Nama Siswa kosong`);
+            errors.push(`Baris ${rowNum}: Nama Siswa kosong, baris dilewati.`);
             return;
           }
 
-          const gender: Gender = genderRaw.startsWith('P') || genderRaw === 'PEREMPUAN' ? 'P' : 'L';
+          // If NISN is missing, fallback gracefully to NIS or generate a unique identifier so the student is NOT lost
+          let nisn = nisnRaw;
+          if (!nisn || nisn === '-' || nisn === '0') {
+            if (nis && nis !== '-' && nis !== '0') {
+              nisn = nis;
+            } else {
+              nisn = `NISN${Date.now().toString().slice(-6)}${idx + 1}`;
+            }
+          }
+
+          const isFemale =
+            genderRaw.startsWith('P') ||
+            genderRaw.startsWith('W') ||
+            genderRaw === 'PEREMPUAN' ||
+            genderRaw === 'WANITA';
+          const gender: Gender = isFemale ? 'P' : 'L';
+
           let className = classNameRaw ? classNameRaw.toUpperCase().trim() : '7A';
           className = className.replace(/^(KELAS|ROMBEL)\s+/i, '').trim();
           if (!className) className = '7A';
 
+          const uniqueId = `std_imp_${nisn.replace(/[^a-zA-Z0-9]/g, '')}_${idx}_${Date.now()}`;
+
           parsedList.push({
-            id: `std_imp_${nisn}_${Date.now()}`,
+            id: uniqueId,
             nisn,
             nis: nis || '',
             name,
@@ -440,7 +582,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
     try {
       const res = await onSaveStudentsBatch(importedPreview);
       setImportFeedback(
-        `Berhasil mengimpor ${res.added} siswa baru dan memperbarui ${res.updated} siswa.`
+        `Berhasil menyimpan seluruh ${importedPreview.length} data siswa (${res.added} siswa baru ditambahkan, ${res.updated} siswa diperbarui).`
       );
       setTimeout(() => {
         setIsImportModalOpen(false);
@@ -507,15 +649,27 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
             <span>Ekspor Excel</span>
           </button>
 
-          {/* Cetak Massal KTS Berdasarkan Filter Aktif */}
+          {/* Ekspor Massal KTS.pdf Berdasarkan Filter Aktif */}
           <button
             type="button"
             onClick={handleOpenBatchPrint}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-xs font-bold border border-indigo-300 transition-all cursor-pointer shadow-xs active:scale-95"
-            title="Cetak massal kartu tanda siswa (KTS) CR-80 sesuai filter yang aktif"
+            title="Buka pratinjau dan ekspor massal KTS.pdf sesuai filter Nama & Kelas yang aktif"
           >
             <Printer className="w-4 h-4 text-indigo-700" />
-            <span>Cetak Massal KTS ({selectedClass === 'SEMUA' ? 'Semua' : `Kelas ${selectedClass}`} - {filteredStudents.length} Siswa)</span>
+            <span>Ekspor Massal KTS.pdf ({selectedClass === 'SEMUA' ? 'Semua' : `Kelas ${selectedClass}`} - {filteredStudents.length} Siswa)</span>
+          </button>
+
+          {/* Tombol Unduh Langsung PDF KTS Sesuai Filter */}
+          <button
+            type="button"
+            onClick={handleDirectDownloadKtsPdf}
+            disabled={filteredStudents.length === 0 || isDownloadingPdf}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+            title="Unduh langsung file PDF hasil ekspor massal KTS sesuai filter aktif"
+          >
+            <Download className="w-4 h-4" />
+            <span>{isDownloadingPdf ? 'Mengunduh...' : 'Unduh'}</span>
           </button>
 
           {/* Tambah Siswa Baru */}
@@ -1156,38 +1310,31 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                   </div>
                 </div>
 
-                {/* Card Main Body */}
-                <div className="p-3 flex-1 flex items-center gap-3 bg-white text-slate-800">
-                  {/* Left Column: Photo & QR */}
-                  <div className="flex flex-col items-center justify-center shrink-0 w-24 space-y-1.5">
+                {/* Card Main Body: Left Foto 3x4 | Center Identitas | Right QR 3x3 cm */}
+                <div className="p-3 flex-1 flex items-center justify-between gap-2.5 bg-white text-slate-800">
+                  {/* Left Column: Photo 3x4 */}
+                  <div className="flex flex-col items-center justify-center shrink-0 w-16">
                     {cardModalStudent.drivePhotoUrl ? (
                       <img
                         src={cardModalStudent.drivePhotoUrl}
                         alt={cardModalStudent.name}
-                        className="w-16 h-20 rounded-md object-cover border border-emerald-700 shadow-xs"
+                        className="w-16 h-22 rounded-md object-cover border border-emerald-700 shadow-xs"
                         onError={(e) => {
                           (e.target as HTMLElement).style.display = 'none';
                         }}
                       />
                     ) : (
-                      <div className="w-16 h-20 rounded-md bg-slate-100 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
+                      <div className="w-16 h-22 rounded-md bg-slate-100 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
                         <User className="w-6 h-6 text-slate-400" />
                         <span className="text-[7px] font-bold mt-1">FOTO 3x4</span>
                       </div>
                     )}
-                    {cardQrUrl && (
-                      <img
-                        src={cardQrUrl}
-                        alt="QR Code"
-                        className="w-14 h-14 rounded border border-slate-200 p-0.5 bg-white shadow-2xs"
-                      />
-                    )}
                   </div>
 
-                  {/* Right Column: Student Data */}
-                  <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 space-y-1 text-[9.5px]">
+                  {/* Center Column: Student Data / Identitas */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 space-y-1 text-[9px] pr-1">
                     <div>
-                      <span className="text-[7.5px] text-slate-400 font-semibold uppercase block">
+                      <span className="text-[7px] text-slate-400 font-semibold uppercase block">
                         Nama Siswa
                       </span>
                       <span className="font-black text-xs text-slate-900 block truncate">
@@ -1195,41 +1342,63 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 gap-1">
                       <div>
-                        <span className="text-[7px] text-slate-400 font-semibold block">NISN / NIS</span>
-                        <span className="font-mono font-bold text-emerald-800 text-[9.5px] block truncate">
+                        <span className="text-[6.5px] text-slate-400 font-semibold block">NISN / NIS</span>
+                        <span className="font-mono font-bold text-emerald-800 text-[9px] block truncate">
                           {cardModalStudent.nisn} {cardModalStudent.nis ? `/ ${cardModalStudent.nis}` : ''}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[7px] text-slate-400 font-semibold block">Kelas / JK</span>
-                        <span className="font-bold text-slate-800 text-[9.5px] block">
+                        <span className="text-[6.5px] text-slate-400 font-semibold block">Kelas / JK</span>
+                        <span className="font-bold text-slate-800 text-[9px] block">
                           Kelas {cardModalStudent.className} ({cardModalStudent.gender === 'L' ? 'L' : 'P'})
                         </span>
                       </div>
                     </div>
 
                     <div>
-                      <span className="text-[7px] text-slate-400 font-semibold block">Tempat, Tgl Lahir</span>
-                      <span className="text-slate-700 text-[8.5px] block truncate font-medium">
+                      <span className="text-[6.5px] text-slate-400 font-semibold block">Tempat, Tgl Lahir</span>
+                      <span className="text-slate-700 text-[8px] block truncate font-medium">
                         {cardModalStudent.birthPlaceDate || 'Tanjung, Lombok Utara'}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-[7px] text-slate-400 font-semibold block">Nama Orang Tua</span>
-                      <span className="text-slate-700 text-[8.5px] block truncate">
+                      <span className="text-[6.5px] text-slate-400 font-semibold block">Nama Orang Tua</span>
+                      <span className="text-slate-700 text-[8px] block truncate">
                         {cardModalStudent.parentName || '-'}
                       </span>
                     </div>
 
                     <div>
-                      <span className="text-[7px] text-slate-400 font-semibold block">Alamat</span>
-                      <span className="text-slate-600 text-[8px] block truncate">
+                      <span className="text-[6.5px] text-slate-400 font-semibold block">Alamat</span>
+                      <span className="text-slate-600 text-[7.5px] block truncate">
                         {cardModalStudent.address || 'Kec. Tanjung, Kab. Lombok Utara'}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Right Column: QR Code (Exact 3 x 3 cm on right of identity) */}
+                  <div className="flex flex-col items-center justify-center shrink-0">
+                    <div
+                      className="bg-white p-0.5 rounded border border-slate-200 shadow-2xs flex items-center justify-center overflow-hidden"
+                      style={{ width: '3cm', height: '3cm', minWidth: '3cm', minHeight: '3cm' }}
+                    >
+                      {cardQrUrl ? (
+                        <img
+                          src={cardQrUrl}
+                          alt="QR Code"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center text-[7.5px] text-slate-400 font-mono">
+                          <QrCode className="w-6 h-6 text-slate-300 mb-0.5" />
+                          <span>3 x 3 cm</span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[6.5px] text-slate-400 font-mono font-bold mt-0.5">QR 3 × 3 cm</span>
                   </div>
                 </div>
 
@@ -1269,7 +1438,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
         </div>
       )}
 
-      {/* ================= MODAL 4: CETAK MASSAL KTS BERDASARKAN FILTER ================= */}
+      {/* ================= MODAL 4: EKSPOR MASSAL KTS BERDASARKAN FILTER ================= */}
       {isBatchPrintOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/70 backdrop-blur-xs animate-in fade-in">
           <div
@@ -1284,10 +1453,10 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                 </div>
                 <div>
                   <h3 className="font-extrabold text-sm sm:text-base">
-                    Cetak Massal Kartu Tanda Siswa (KTS)
+                    Ekspor Massal Kartu Tanda Siswa (KTS.pdf)
                   </h3>
                   <p className="text-[11px] text-indigo-200">
-                    Filter Aktif: <strong className="text-white">{selectedClass === 'SEMUA' ? 'Semua Kelas' : `Kelas ${selectedClass}`}</strong> • Total <strong>{filteredStudents.length} Siswa</strong> (Standar CR-80: 8,56 cm × 5,4 cm)
+                    Filter Dinamis: <strong className="text-white">{selectedClass === 'SEMUA' ? 'Semua Kelas' : `Kelas ${selectedClass}`}</strong> {searchTerm ? `• Pencarian: "${searchTerm}"` : ''} • Total <strong>{filteredStudents.length} Siswa</strong>
                   </p>
                 </div>
               </div>
@@ -1299,25 +1468,38 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
               </button>
             </div>
 
-            {/* Instruction banner */}
+            {/* Instruction & Action Banner */}
             <div className="p-3 bg-indigo-50 border-b border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-indigo-900">
               <div>
                 <p className="font-semibold">
-                  Siap dicetak pada kertas A4 (perkiraan {Math.ceil(filteredStudents.length / 8)} lembar A4 @ 8 kartu/lembar).
+                  Sesuai Filter Aktif: {filteredStudents.length} siswa siap diekspor ke format PDF atau dicetak.
                 </p>
                 <p className="text-[11px] text-indigo-700">
-                  Gunakan opsi cetak peramban dengan ukuran kertas A4, margin "Minimum", dan aktifkan "Grafik latar belakang".
+                  Layout kartu KTS standar CR-80 dengan QR Code presensi <strong>3 × 3 cm</strong> di sebelah kanan identitas siswa.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  disabled={isDownloadingPdf || filteredStudents.length === 0}
+                  onClick={handleDirectDownloadKtsPdf}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-emerald-950/20 active:scale-95"
+                >
+                  {isDownloadingPdf ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  <span>Unduh File KTS.pdf</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-indigo-950/20 active:scale-95"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-indigo-950/20 active:scale-95"
                 >
                   <Printer className="w-4 h-4" />
-                  <span>Cetak {filteredStudents.length} Kartu Sekarang</span>
+                  <span>Cetak Browser (A4)</span>
                 </button>
               </div>
             </div>
@@ -1328,25 +1510,23 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                 <div className="py-16 text-center space-y-3">
                   <div className="w-10 h-10 border-4 border-indigo-300 border-t-indigo-700 rounded-full animate-spin mx-auto" />
                   <p className="text-xs font-semibold text-slate-600">
-                    Menyiapkan kode QR presensi untuk {filteredStudents.length} siswa...
+                    Menyiapkan kode QR presensi (3 × 3 cm) untuk {filteredStudents.length} siswa...
                   </p>
                 </div>
               ) : filteredStudents.length === 0 ? (
                 <div className="py-16 text-center text-xs text-slate-500">
-                  Tidak ada data siswa untuk dicetak pada filter yang aktif.
+                  Tidak ada data siswa untuk diekspor pada filter yang aktif.
                 </div>
               ) : (
                 <div
                   id="printable-kts-area"
-                  className="grid grid-cols-1 md:grid-cols-2 gap-4 place-items-center"
+                  className="grid grid-cols-1 lg:grid-cols-2 gap-4 place-items-center"
                 >
                   {filteredStudents.map((std) => (
                     <div
                       key={std.id}
-                      className="w-[342px] h-[216px] bg-white rounded-xl shadow-md border border-slate-300 overflow-hidden flex flex-col justify-between cr80-card-print"
+                      className="w-[390px] h-[225px] sm:w-[420px] sm:h-[238px] bg-white rounded-xl shadow-md border border-slate-300 overflow-hidden flex flex-col justify-between cr80-card-print"
                       style={{
-                        width: '342px',
-                        height: '216px',
                         aspectRatio: '85.6/54',
                       }}
                     >
@@ -1371,43 +1551,32 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                         </div>
                       </div>
 
-                      {/* Content */}
-                      <div className="p-2 flex-1 flex items-center gap-2 bg-white text-slate-800">
-                        {/* Foto & QR */}
-                        <div className="flex flex-col items-center justify-center shrink-0 w-20 space-y-1">
+                      {/* Content: 3-column layout (Left: Photo, Center: Biodata, Right: QR Code 3x3 cm) */}
+                      <div className="p-2 flex-1 flex items-center justify-between gap-2 bg-white text-slate-800">
+                        {/* 1. Left: Foto Siswa 3x4 */}
+                        <div className="flex flex-col items-center justify-center shrink-0">
                           {std.drivePhotoUrl ? (
                             <img
                               src={std.drivePhotoUrl}
                               alt={std.name}
-                              className="w-13 h-16 rounded object-cover border border-emerald-700 shadow-2xs"
+                              className="w-13 h-17 rounded object-cover border border-emerald-700 shadow-2xs"
                               onError={(e) => {
                                 (e.target as HTMLElement).style.display = 'none';
                               }}
                             />
                           ) : (
-                            <div className="w-13 h-16 rounded bg-slate-100 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
+                            <div className="w-13 h-17 rounded bg-slate-100 border border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400">
                               <User className="w-5 h-5 text-slate-400" />
-                              <span className="text-[6px] font-bold mt-0.5">3x4</span>
-                            </div>
-                          )}
-                          {batchQrCodes[std.nisn] ? (
-                            <img
-                              src={batchQrCodes[std.nisn]}
-                              alt="QR"
-                              className="w-12 h-12 rounded border border-slate-200 p-0.5 bg-white shadow-2xs"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 bg-slate-100 rounded flex items-center justify-center text-[7px] text-slate-400">
-                              QR
+                              <span className="text-[6.5px] font-bold mt-0.5">3x4</span>
                             </div>
                           )}
                         </div>
 
-                        {/* Biodata */}
-                        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 space-y-0.5 text-[8.5px]">
+                        {/* 2. Center: Identitas Siswa */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 space-y-0.5 text-[8.5px] px-1">
                           <div>
                             <span className="text-[6.5px] text-slate-400 font-semibold uppercase block">
-                              Nama Lengkap
+                              Nama Siswa
                             </span>
                             <span className="font-black text-[10px] text-slate-900 block truncate">
                               {std.name}
@@ -1423,8 +1592,8 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                             </div>
                             <div>
                               <span className="text-[6px] text-slate-400 font-semibold block">Kelas / JK</span>
-                              <span className="font-bold text-slate-800 text-[8.5px] block">
-                                {std.className} ({std.gender})
+                              <span className="font-bold text-slate-800 text-[8.5px] block truncate">
+                                Kelas {std.className} ({std.gender})
                               </span>
                             </div>
                           </div>
@@ -1450,6 +1619,28 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                             </span>
                           </div>
                         </div>
+
+                        {/* 3. Right: QR Code at exact 3 x 3 cm */}
+                        <div className="flex flex-col items-center justify-center shrink-0">
+                          <div
+                            className="bg-white p-0.5 rounded border border-slate-200 shadow-2xs flex items-center justify-center overflow-hidden"
+                            style={{ width: '3cm', height: '3cm', minWidth: '3cm', minHeight: '3cm' }}
+                          >
+                            {batchQrCodes[std.nisn] ? (
+                              <img
+                                src={batchQrCodes[std.nisn]}
+                                alt="QR"
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center text-[7px] text-slate-400 font-mono">
+                                <QrCode className="w-5 h-5 text-slate-300 mb-0.5" />
+                                <span>3 × 3 cm</span>
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[6px] text-slate-400 font-mono font-bold mt-0.5">QR 3 × 3 cm</span>
+                        </div>
                       </div>
 
                       {/* Footer */}
@@ -1466,22 +1657,40 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
             </div>
 
             {/* Modal Bottom Actions */}
-            <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsBatchPrintOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold cursor-pointer"
-              >
-                Tutup
-              </button>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md"
-              >
-                <Printer className="w-4 h-4" />
-                <span>Cetak Lembar KTS</span>
-              </button>
+            <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-xs text-slate-600 font-medium">
+                {filteredStudents.length} kartu KTS terpilih
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBatchPrintOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold cursor-pointer"
+                >
+                  Tutup
+                </button>
+                <button
+                  type="button"
+                  disabled={isDownloadingPdf || filteredStudents.length === 0}
+                  onClick={handleDirectDownloadKtsPdf}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-emerald-950/20 active:scale-95"
+                >
+                  {isDownloadingPdf ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  <span>Unduh File KTS.pdf</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-indigo-950/20 active:scale-95"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Cetak Lembar KTS</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

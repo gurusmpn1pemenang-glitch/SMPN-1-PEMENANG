@@ -93,7 +93,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span>Sistem Informasi Presensi & Jurnal Mengajar Digital</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-              Portal Akademik SMP Negeri 2 Tanjung
+              Portal Akademik
             </h1>
             <p className="text-emerald-100 text-sm leading-relaxed">
               Memudahkan monitoring kehadiran siswa dan guru secara real-time dengan kartu QR pintar,

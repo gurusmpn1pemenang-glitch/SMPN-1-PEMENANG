@@ -7,6 +7,7 @@ import {
   query,
   limit,
   onSnapshot,
+  writeBatch,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
 import { handleFirestoreError, OperationType } from '../firebase/errorHandler';
@@ -151,7 +152,7 @@ export async function getStudents(forceRefresh = false): Promise<Student[]> {
   // When online, fetch fresh master data from Cloud Firestore to sync across all devices
   try {
     const colRef = collection(db, 'students');
-    const snapshot = await getDocs(query(colRef, limit(150)));
+    const snapshot = await getDocs(colRef);
 
     if (snapshot.empty) {
       const seedList = localStudents.length > 0 ? localStudents : INITIAL_STUDENTS;
@@ -257,27 +258,51 @@ export async function saveStudent(rawStudent: Student): Promise<void> {
 export async function saveStudentsBatch(
   newStudents: Student[]
 ): Promise<{ added: number; updated: number }> {
-  // Sanitize all incoming student payloads to guarantee no undefined fields
-  const sanitizedStudents = newStudents.map((s) => sanitizeStudentForFirestore(s));
+  // 1. Sanitize all incoming student payloads
+  const sanitizedIncoming = newStudents.map((s) => sanitizeStudentForFirestore(s));
   const currentStudents = await getStudents();
   let added = 0;
   let updated = 0;
 
-  const studentMap = new Map<string, Student>();
-  currentStudents.forEach((s) => studentMap.set(s.nisn, s));
+  // Collision-free key generator: does not collapse students who have missing or '-' NISN
+  const getKey = (s: { nisn?: string; nis?: string; id?: string; name?: string; className?: string }) => {
+    const cleanNisn = s.nisn ? String(s.nisn).trim() : '';
+    if (cleanNisn && cleanNisn !== '-' && cleanNisn !== '0') {
+      return `nisn:${cleanNisn}`;
+    }
+    const cleanNis = s.nis ? String(s.nis).trim() : '';
+    if (cleanNis && cleanNis !== '-' && cleanNis !== '0') {
+      return `nis:${cleanNis}`;
+    }
+    if (s.id && s.id.trim()) {
+      return `id:${s.id.trim()}`;
+    }
+    return `name:${(s.name || '').trim().toLowerCase()}_${(s.className || '').trim().toLowerCase()}`;
+  };
 
-  sanitizedStudents.forEach((ns) => {
-    if (studentMap.has(ns.nisn)) {
-      const existing = studentMap.get(ns.nisn)!;
-      studentMap.set(ns.nisn, {
+  const studentMap = new Map<string, Student>();
+  currentStudents.forEach((s) => {
+    studentMap.set(getKey(s), s);
+  });
+
+  const studentsToPersist: Student[] = [];
+
+  sanitizedIncoming.forEach((ns) => {
+    const key = getKey(ns);
+    if (studentMap.has(key)) {
+      const existing = studentMap.get(key)!;
+      const merged: Student = {
         ...existing,
         ...ns,
-        id: existing.id,
+        id: existing.id, // Preserve consistent Firestore document ID
         updatedAt: new Date().toISOString(),
-      });
+      };
+      studentMap.set(key, merged);
+      studentsToPersist.push(merged);
       updated++;
     } else {
-      studentMap.set(ns.nisn, ns);
+      studentMap.set(key, ns);
+      studentsToPersist.push(ns);
       added++;
     }
   });
@@ -285,9 +310,9 @@ export async function saveStudentsBatch(
   const finalStudents = Array.from(studentMap.values());
   localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(finalStudents));
 
-  // Sync to Firestore in background or offline queue
+  // Sync to Firestore using writeBatch and AWAIT so all records are committed before returning
   if (!isOnline()) {
-    sanitizedStudents.forEach((s) => {
+    studentsToPersist.forEach((s) => {
       addToOfflineQueue({
         type: 'student',
         action: 'create',
@@ -295,19 +320,35 @@ export async function saveStudentsBatch(
       });
     });
   } else {
-    // Write in background
-    Promise.all(
-      sanitizedStudents.map((s) =>
-        setDoc(doc(db, 'students', s.id), s, { merge: true }).catch((err) => {
-          addToOfflineQueue({
-            type: 'student',
-            action: 'create',
-            data: s,
-          });
-          console.warn('Queueing student sync:', err);
-        })
-      )
-    );
+    // Write in chunks of 400 (Firestore batch limit is 500)
+    const CHUNK_SIZE = 400;
+    for (let i = 0; i < studentsToPersist.length; i += CHUNK_SIZE) {
+      const chunk = studentsToPersist.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+      chunk.forEach((std) => {
+        const docRef = doc(db, 'students', std.id);
+        batch.set(docRef, std, { merge: true });
+      });
+
+      try {
+        await batch.commit();
+      } catch (batchErr) {
+        console.warn('Batch commit failed, falling back to individual writes:', batchErr);
+        // Fallback: save individually
+        for (const std of chunk) {
+          try {
+            await setDoc(doc(db, 'students', std.id), std, { merge: true });
+          } catch (individualErr) {
+            addToOfflineQueue({
+              type: 'student',
+              action: 'create',
+              data: std,
+            });
+            console.error('Failed to write student to Firestore:', std.nisn, individualErr);
+          }
+        }
+      }
+    }
   }
 
   return { added, updated };

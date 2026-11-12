@@ -49,10 +49,13 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
 }) => {
   const [activeMode, setActiveMode] = useState<'camera' | 'manual'>('camera');
   const [manualCode, setManualCode] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<AttendanceStatus>('hadir');
-  const [attendanceType, setAttendanceType] = useState<'masuk' | 'pulang'>('masuk');
-  const [petugasName, setPetugasName] = useState<string>(recordedBy || 'Petugas Scanner');
-  const [notes, setNotes] = useState('');
+  const [selectedStatus] = useState<AttendanceStatus>('hadir');
+  const [attendanceType, setAttendanceType] = useState<'masuk' | 'pulang'>(() => {
+    const hour = new Date().getHours();
+    return hour >= 11 ? 'pulang' : 'masuk';
+  });
+  const [petugasName] = useState<string>(recordedBy || 'Petugas Scanner');
+  const [notes] = useState('');
 
   // Manual attendance filter states
   const [manualSearchName, setManualSearchName] = useState('');
@@ -519,7 +522,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
         </div>
       )}
 
-      {/* Main Header with Operational Info */}
+      {/* Main Header with Operational Info & Mode Switch */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
@@ -537,11 +540,39 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
           </div>
         </div>
 
-        {/* Operating hours indicator */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 flex items-center gap-2">
+        {/* Operating hours & Mode Switcher */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Quick Mode Switcher: Scan Masuk vs Scan Pulang */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setAttendanceType('masuk')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                attendanceType === 'masuk'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${attendanceType === 'masuk' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`} />
+              <span>Scan Masuk</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAttendanceType('pulang')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                attendanceType === 'pulang'
+                  ? 'bg-indigo-700 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${attendanceType === 'pulang' ? 'bg-indigo-300 animate-pulse' : 'bg-slate-400'}`} />
+              <span>Scan Pulang</span>
+            </button>
+          </div>
+
+          <div className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 flex items-center gap-2">
             <Clock className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Masuk: <strong>{operationalSettings.jamMasuk}</strong> (Batas: <strong>{operationalSettings.batasToleransiTerlambat}</strong>)</span>
+            <span>Masuk: <strong>{operationalSettings.jamMasuk}</strong></span>
             <span className="text-slate-300">•</span>
             <span>Pulang: <strong>{operationalSettings.jamPulang}</strong></span>
           </div>
@@ -781,179 +812,173 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Settings & Live Result Card */}
+        {/* Right Column: Live Result & Real-Time Scanned Feed */}
         <div className="lg:col-span-5 space-y-4">
-          {/* Scan Configuration Card */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
-            <h3 className="font-bold text-sm text-slate-800 border-b border-slate-100 pb-2">
-              Pengaturan Pos Scanner
-            </h3>
-
-            {/* Nama Petugas Scanner (Mandatory recording) */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Nama Petugas Scanner (Piket) *</span>
-              </label>
-              <input
-                type="text"
-                value={petugasName}
-                onChange={(e) => setPetugasName(e.target.value)}
-                placeholder="Nama guru / petugas jaga..."
-                required
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-emerald-50/30"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">
-                Tercatat pada riwayat presensi masuk/pulang
-              </p>
-            </div>
-
-            {/* Type Selector: Scan Masuk vs Scan Pulang */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Jenis Presensi:
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAttendanceType('masuk')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                    attendanceType === 'masuk'
-                      ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  🟢 Scan Masuk
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAttendanceType('pulang')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                    attendanceType === 'pulang'
-                      ? 'bg-indigo-700 text-white border-indigo-700 shadow-xs'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  🔵 Scan Pulang
-                </button>
-              </div>
-            </div>
-
-            {/* Status Kehadiran Selector */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Status Kehadiran Bawaan:
-              </label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {(['hadir', 'sakit', 'izin', 'alpa'] as AttendanceStatus[]).map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    onClick={() => setSelectedStatus(st)}
-                    className={`py-1.5 rounded-lg text-xs font-bold uppercase transition-all cursor-pointer ${
-                      selectedStatus === st
-                        ? st === 'hadir'
-                          ? 'bg-emerald-600 text-white'
-                          : st === 'sakit'
-                          ? 'bg-blue-600 text-white'
-                          : st === 'izin'
-                          ? 'bg-amber-600 text-white'
-                          : 'bg-rose-600 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Optional Notes */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Catatan Khusus (Opsional):
-              </label>
-              <input
-                type="text"
-                placeholder="Contoh: Dispensasi lomba, piket, dll..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-              />
-            </div>
-          </div>
-
           {/* Last Scanned Result Notification Card */}
-          {lastScannedResult && (
+          {lastScannedResult ? (
             <div
-              className={`p-4 rounded-xl border transition-all animate-in fade-in zoom-in-95 ${
+              className={`p-5 rounded-2xl border transition-all animate-in fade-in zoom-in-95 shadow-md ${
                 lastScannedResult.success
                   ? lastScannedResult.isLate
-                    ? 'bg-amber-50 border-amber-300 text-amber-900'
-                    : 'bg-emerald-50 border-emerald-300 text-emerald-900'
-                  : 'bg-rose-50 border-rose-300 text-rose-900'
+                    ? 'bg-amber-50 border-amber-300 text-amber-950'
+                    : 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                  : 'bg-rose-50 border-rose-300 text-rose-950'
               }`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3.5">
                 {lastScannedResult.success ? (
-                  <CheckCircle2
-                    className={`w-5 h-5 shrink-0 mt-0.5 ${
-                      lastScannedResult.isLate ? 'text-amber-600' : 'text-emerald-600'
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
+                      lastScannedResult.isLate ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white'
                     }`}
-                  />
+                  >
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
                 ) : (
-                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <AlertCircle className="w-6 h-6" />
+                  </div>
                 )}
 
                 <div className="space-y-1 text-xs w-full">
                   <div className="flex items-center justify-between">
-                    <span className="font-extrabold uppercase text-[10px] tracking-wider">
-                      {lastScannedResult.success ? 'Presensi Berhasil' : 'Gagal Memindai'}
+                    <span className="font-black uppercase text-[10px] tracking-wider text-slate-500">
+                      {lastScannedResult.success ? 'Presensi Berhasil Dicatat' : 'Gagal Memindai'}
                     </span>
                     {lastScannedResult.time && (
-                      <span className="font-mono text-[10px] font-bold text-slate-500">
+                      <span className="font-mono text-xs font-black text-slate-700 bg-white/80 px-2 py-0.5 rounded border border-slate-200">
                         {lastScannedResult.time} WITA
                       </span>
                     )}
                   </div>
 
-                  <p className="font-bold text-sm">
+                  <p className="font-black text-base text-slate-900 leading-snug">
                     {lastScannedResult.targetName || lastScannedResult.message}
                   </p>
 
                   {lastScannedResult.targetName && (
-                    <div className="pt-1 text-[11px] space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">NISN: {lastScannedResult.nisnOrNip}</span>
-                        <span>•</span>
-                        <span className="font-semibold text-emerald-800">
+                    <div className="pt-2 text-[11px] space-y-1.5 border-t border-slate-200/60 mt-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-slate-700">
+                          NISN: {lastScannedResult.nisnOrNip}
+                        </span>
+                        <span className="text-slate-300">•</span>
+                        <span className="font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded">
                           Kelas {lastScannedResult.className}
+                        </span>
+                        <span className="text-slate-300">•</span>
+                        <span className="capitalize font-bold text-slate-600">
+                          {lastScannedResult.type === 'pulang' ? 'Presensi Pulang' : 'Presensi Masuk'}
                         </span>
                       </div>
 
                       {/* Late indicator badge */}
                       {lastScannedResult.isLate && (
-                        <div className="inline-block px-2 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px] font-bold">
-                          ⚠️ Terlambat: +{lastScannedResult.lateMinutes} menit
+                        <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-200 text-amber-950 text-[11px] font-bold">
+                          <span>⚠️ Terlambat: +{lastScannedResult.lateMinutes} menit</span>
                         </div>
                       )}
 
                       {/* Early departure indicator */}
                       {lastScannedResult.isEarlyDeparture && (
-                        <div className="inline-block px-2 py-0.5 rounded bg-blue-200 text-blue-900 text-[10px] font-bold">
-                          ℹ️ Pulang Mendahului Jadwal
+                        <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-200 text-blue-950 text-[11px] font-bold">
+                          <span>ℹ️ Pulang Mendahului Jadwal</span>
                         </div>
                       )}
 
-                      <div className="text-[10px] text-slate-500">
-                        Petugas Jaga: {lastScannedResult.officerName}
+                      <div className="text-[10px] text-slate-500 pt-1">
+                        Petugas Jaga: <strong>{lastScannedResult.officerName || petugasName}</strong>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
             </div>
+          ) : (
+            /* Standby Card when no scan performed yet */
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col items-center justify-center text-center space-y-3 py-8">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                <QrCode className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-800 text-sm">Scanner Siap Memindai</h4>
+                <p className="text-xs text-slate-500 max-w-xs mt-1">
+                  Arahkan kartu QR siswa (KTS) atau ID guru ke depan kamera. Data presensi langsung tercatat secara otomatis.
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
+                <span>Mode: {attendanceType === 'masuk' ? 'Scan Masuk' : 'Scan Pulang'}</span>
+              </div>
+            </div>
           )}
+
+          {/* Today's Live Attendance Feed */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-emerald-700" />
+                <h3 className="font-bold text-xs text-slate-800">
+                  Riwayat Pindai Hari Ini
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-bold">
+                <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Masuk: {attendances.filter((a) => a.date === todayStr && (a.type || 'masuk') === 'masuk').length}
+                </span>
+                <span className="text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                  Pulang: {attendances.filter((a) => a.date === todayStr && a.type === 'pulang').length}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 max-h-[280px] overflow-y-auto scrollbar-thin pr-1">
+              {attendances.filter((a) => a.date === todayStr).length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  Belum ada presensi yang tercatat hari ini.
+                </div>
+              ) : (
+                attendances
+                  .filter((a) => a.date === todayStr)
+                  .sort((a, b) => (b.time || '').localeCompare(a.time || ''))
+                  .slice(0, 8)
+                  .map((att) => (
+                    <div
+                      key={att.id}
+                      className="p-2 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-900 truncate block">
+                            {att.targetName}
+                          </span>
+                          <span className="text-[10px] font-mono px-1 rounded bg-slate-200 text-slate-700 shrink-0">
+                            {att.className}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-2">
+                          <span>{att.time} WITA</span>
+                          <span>•</span>
+                          <span className="capitalize">{att.type === 'pulang' ? 'Pulang' : 'Masuk'}</span>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                            att.isLate
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          }`}
+                        >
+                          {att.isLate ? `Telat ${att.lateMinutes}m` : 'Hadir'}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

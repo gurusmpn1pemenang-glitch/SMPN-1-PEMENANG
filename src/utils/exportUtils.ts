@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import QRCode from 'qrcode';
 import { Attendance, LearningJournal, Student, MonthlyReport, SchoolIdentitySettings } from '../types/school';
 
 // Default official school letterhead info
@@ -489,4 +490,229 @@ export function exportMonthlyReportToPDF(
   doc.text('NIP. -', 25, finalY + 28);
 
   doc.save(`Evaluasi_Bulanan_${report.className}_${report.monthYear.replace(' ', '_')}.pdf`);
+}
+
+// ================= MASS EXPORT KTS TO PDF (CR-80, QR CODE 3x3 CM) =================
+/**
+ * Exports multiple Student Identity Cards (KTS) to a printable/downloadable PDF (A4 sheet).
+ * Conforms to standard CR-80 card dimensions (85.6 mm x 54.0 mm).
+ * Strictly renders QR code at exactly 3 x 3 cm (30 mm x 30 mm) positioned to the right of student identity.
+ */
+export async function exportKtsBatchToPdf(
+  students: Student[],
+  options?: {
+    filterClass?: string;
+    searchTerm?: string;
+    schoolInfo?: SchoolIdentitySettings;
+    qrMap?: { [nisn: string]: string };
+  }
+): Promise<void> {
+  if (students.length === 0) return;
+
+  const school = options?.schoolInfo || DEFAULT_SCHOOL_INFO;
+  const filterClass = options?.filterClass || 'Semua';
+  const searchTerm = options?.searchTerm || '';
+  const qrMap = options?.qrMap || {};
+
+  // Create A4 PDF (210 mm x 297 mm, Portrait)
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const cardW = 85.6; // Standar CR-80 width in mm (8.56 cm)
+  const cardH = 54.0; // Standar CR-80 height in mm (5.4 cm)
+
+  const leftMargin = 14.0;
+  const colGap = 10.8;
+  const topMargin = 18.0;
+  const rowGap = 12.0;
+
+  const cardsPerPage = 8; // 2 columns x 4 rows = 8 cards per A4 page
+
+  // Pre-generate any missing QR codes
+  const resolvedQrMap: { [nisn: string]: string } = { ...qrMap };
+  for (const s of students) {
+    if (!resolvedQrMap[s.nisn]) {
+      try {
+        const qrContent = s.qrCode || `SMPN2TJ-SISWA-${s.nisn}`;
+        resolvedQrMap[s.nisn] = await QRCode.toDataURL(qrContent, {
+          width: 200,
+          margin: 1,
+          color: { dark: '#064e3b', light: '#ffffff' },
+        });
+      } catch (err) {
+        console.error('Failed to generate QR for PDF:', s.nisn, err);
+      }
+    }
+  }
+
+  students.forEach((student, index) => {
+    const pageIndex = Math.floor(index / cardsPerPage);
+    const cardIndexOnPage = index % cardsPerPage;
+
+    if (index > 0 && cardIndexOnPage === 0) {
+      doc.addPage('a4', 'portrait');
+    }
+
+    // Page Header / Running Head
+    if (cardIndexOnPage === 0) {
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(
+        `Lembar KTS Massal (CR-80 • 8,56 × 5,4 cm) • ${school.schoolName} • Filter: ${
+          filterClass === 'SEMUA' ? 'Semua Kelas' : `Kelas ${filterClass}`
+        }${searchTerm ? ` • Pencarian: "${searchTerm}"` : ''} • Hal. ${pageIndex + 1}`,
+        leftMargin,
+        10
+      );
+    }
+
+    const col = cardIndexOnPage % 2; // 0 or 1
+    const row = Math.floor(cardIndexOnPage / 2); // 0, 1, 2, 3
+
+    const cardX = leftMargin + col * (cardW + colGap);
+    const cardY = topMargin + row * (cardH + rowGap);
+
+    // 1. Outer Card Box with rounded corners and border
+    doc.setDrawColor(203, 213, 225); // slate-300
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(cardX, cardY, cardW, cardH, 2.5, 2.5, 'FD');
+
+    // 2. Kop Kartu (Header bar)
+    doc.setFillColor(6, 78, 59); // emerald-900
+    doc.roundedRect(cardX, cardY, cardW, 11, 2.5, 2.5, 'F');
+    doc.rect(cardX, cardY + 8, cardW, 3, 'F'); // square bottom of kop
+
+    // Gold accent line under kop
+    doc.setFillColor(251, 191, 36); // amber-400
+    doc.rect(cardX, cardY + 11, cardW, 0.8, 'F');
+
+    // Text in Kop
+    doc.setTextColor(204, 251, 241); // teal-100
+    doc.setFontSize(5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PEMKAB LOMBOK UTARA • DISDIKPORA', cardX + 3, cardY + 4);
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.text(school.schoolName || 'SMP NEGERI 2 TANJUNG', cardX + 3, cardY + 8);
+
+    doc.setTextColor(251, 191, 36); // gold
+    doc.setFontSize(5.5);
+    doc.text('KTS DIGITAL', cardX + cardW - 3, cardY + 5, { align: 'right' });
+    doc.setTextColor(204, 251, 241);
+    doc.setFontSize(4.8);
+    doc.text(`NPSN: ${school.npsn || '50205566'}`, cardX + cardW - 3, cardY + 8.5, { align: 'right' });
+
+    // 3. Middle Section:
+    // LEFT: Foto Siswa (3x4 aspect ratio, 14.5 mm x 19.5 mm)
+    const fotoX = cardX + 2.8;
+    const fotoY = cardY + 13.5;
+    const fotoW = 14.5;
+    const fotoH = 19.5;
+
+    doc.setDrawColor(6, 78, 59); // border
+    doc.setFillColor(241, 245, 249); // slate-100
+    doc.roundedRect(fotoX, fotoY, fotoW, fotoH, 1, 1, 'FD');
+
+    doc.setFontSize(5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('FOTO 3x4', fotoX + fotoW / 2, fotoY + fotoH / 2, { align: 'center' });
+
+    // CENTER: Identitas Siswa
+    const identX = cardX + 19.5;
+    const identY = cardY + 14.5;
+
+    doc.setTextColor(100, 116, 139);
+    doc.setFontSize(4.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('NAMA SISWA', identX, identY);
+
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text(student.name.length > 21 ? student.name.substring(0, 20) + '...' : student.name, identX, identY + 3.2);
+
+    doc.setFontSize(4.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('NISN / NIS', identX, identY + 7.5);
+
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(6, 78, 59); // emerald
+    doc.text(`${student.nisn}${student.nis ? ' / ' + student.nis : ''}`, identX, identY + 10.5);
+
+    doc.setFontSize(4.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('KELAS / JK', identX, identY + 14.5);
+
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Kelas ${student.className} (${student.gender === 'L' ? 'L' : 'P'})`, identX, identY + 17.5);
+
+    doc.setFontSize(4.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('TEMPAT, TGL LAHIR', identX, identY + 21.5);
+
+    doc.setFontSize(5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 41, 59);
+    const ttlText = student.birthPlaceDate || 'Tanjung, Lombok Utara';
+    doc.text(ttlText.length > 24 ? ttlText.substring(0, 23) + '...' : ttlText, identX, identY + 24.5);
+
+    doc.setFontSize(4.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text('ORANG TUA / WALI', identX, identY + 28);
+    doc.setFontSize(5.5);
+    doc.setTextColor(30, 41, 59);
+    const ortuText = student.parentName || '-';
+    doc.text(ortuText.length > 24 ? ortuText.substring(0, 23) + '...' : ortuText, identX, identY + 31);
+
+    // RIGHT: QR CODE (EXACTLY 3 x 3 cm = 30 x 30 mm, POSITIONED TO THE RIGHT OF IDENTITAS)
+    const qrSize = 30.0; // 3.0 cm = 30 mm
+    const qrX = cardX + cardW - qrSize - 2.2; // ~53.4 mm from card left
+    const qrY = cardY + 14.0;
+
+    // Background box for QR Code
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(qrX - 0.5, qrY - 0.5, qrSize + 1, qrSize + 1, 1, 1, 'FD');
+
+    const qrData = resolvedQrMap[student.nisn];
+    if (qrData) {
+      doc.addImage(qrData, 'PNG', qrX, qrY, qrSize, qrSize);
+    } else {
+      doc.setFontSize(6);
+      doc.setTextColor(148, 163, 184);
+      doc.text('QR 3x3 cm', qrX + qrSize / 2, qrY + qrSize / 2, { align: 'center' });
+    }
+
+    // Label under QR Code
+    doc.setFontSize(4.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text('QR Code (3 × 3 cm)', qrX + qrSize / 2, qrY + qrSize + 2.5, { align: 'center' });
+
+    // 4. Card Footer
+    doc.setFillColor(15, 23, 42); // slate-900
+    doc.rect(cardX, cardY + cardH - 5.5, cardW, 3.5, 'F');
+    doc.roundedRect(cardX, cardY + cardH - 5.5, cardW, 5.5, 2.5, 2.5, 'F');
+
+    doc.setTextColor(52, 211, 153); // emerald-400
+    doc.setFontSize(4.8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CR-80 • 8,56 cm × 5,4 cm • QR 3 × 3 cm', cardX + 3, cardY + cardH - 1.8);
+
+    doc.setTextColor(148, 163, 184);
+    doc.text('KTS DIGITAL RESMI', cardX + cardW - 3, cardY + cardH - 1.8, { align: 'right' });
+  });
+
+  const classSlug = filterClass === 'SEMUA' ? 'Semua_Kelas' : `Kelas_${filterClass}`;
+  const filename = `KTS_Massal_${classSlug}_${students.length}_Siswa.pdf`;
+  doc.save(filename);
 }
