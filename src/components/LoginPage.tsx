@@ -88,7 +88,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       if (!matchedTeacher) {
         setErrorMsg(
-          `NIP "${cleanId}" tidak ditemukan dalam daftar guru SMPN 2 Tanjung. Pastikan NIP sudah terdaftar di Manajemen Akun.`
+          `NIP "${cleanId}" tidak ditemukan dalam daftar guru ${schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}. Pastikan NIP sudah terdaftar di Manajemen Akun.`
         );
         setIsSubmitting(false);
         return;
@@ -107,7 +107,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       const isDefaultPassword = validPass === '123123';
       const appUser: AppUser = {
         uid: matchedTeacher.id,
-        email: matchedTeacher.email || `${matchedTeacher.nip}@guru.smpn2tanjung.sch.id`,
+        email: matchedTeacher.email || `${matchedTeacher.nip}@guru.smpn1tanjung.sch.id`,
         displayName: matchedTeacher.name,
         photoURL: matchedTeacher.photoUrl || null,
         role: 'guru',
@@ -140,7 +140,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       const kepsekUser: AppUser = {
         uid: 'user_kepsek_01',
-        email: 'kepsek@smpn2tanjung.sch.id',
+        email: 'kepsek@smpn1tanjung.sch.id',
         displayName: schoolSettings?.headmasterName || 'Drs. H. Ahmad Dahlan, M.Pd. (Kepsek)',
         photoURL: null,
         role: 'kepala_sekolah',
@@ -232,7 +232,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               {schoolSettings?.districtName || 'KABUPATEN LOMBOK UTARA'}
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {schoolSettings?.schoolName || 'SMP NEGERI 2 TANJUNG'}
+              {schoolSettings?.schoolName || 'SMP NEGERI 1 TANJUNG'}
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               Sistem Informasi Kehadiran QR & Jurnal Pembelajaran Digital

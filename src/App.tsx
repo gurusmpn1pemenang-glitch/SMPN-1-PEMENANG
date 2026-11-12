@@ -401,7 +401,15 @@ export default function App() {
       // ignore
     }
     localStorage.removeItem('smpn2tj_auth_user');
+    try {
+      sessionStorage.clear();
+    } catch {
+      // ignore
+    }
     setCurrentUser(null);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
   };
 
   if (!currentUser) {
@@ -430,6 +438,7 @@ export default function App() {
         setIsOpenMobile={setIsOpenMobile}
         schoolSettings={schoolSettings}
         onOpenProfile={() => setIsProfileModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* 2. Main Content Area */}

@@ -1309,7 +1309,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                         {schoolSettings?.districtName ? schoolSettings.districtName.toUpperCase() : 'PEMKAB LOMBOK UTARA'} • DISDIKPORA
                       </div>
                       <div className="text-[11px] font-black tracking-tight text-white">
-                        {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 2 TANJUNG'}
+                        {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 TANJUNG'}
                       </div>
                     </div>
                   </div>
@@ -1420,7 +1420,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                   <span className="font-mono text-emerald-400 font-semibold">
                     Ukuran Standar ID Card: 8,56 cm × 5,4 cm
                   </span>
-                  <span className="text-slate-400">SMPN 2 TANJUNG</span>
+                  <span className="text-slate-400">
+                    {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMPN 1 TANJUNG'}
+                  </span>
                 </div>
               </div>
 
@@ -1560,7 +1562,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                               {schoolSettings?.districtName ? schoolSettings.districtName.toUpperCase() : 'PEMKAB LOMBOK UTARA'} • DISDIKPORA
                             </div>
                             <div className="text-[9.5px] font-black tracking-tight text-white">
-                              {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 2 TANJUNG'}
+                              {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 TANJUNG'}
                             </div>
                           </div>
                         </div>
@@ -1671,7 +1673,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                         <span className="font-mono text-emerald-400 font-semibold">
                           CR-80 • 8,56 cm × 5,4 cm
                         </span>
-                        <span className="text-slate-400">SMPN 2 TANJUNG</span>
+                        <span className="text-slate-400">
+                          {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMPN 1 TANJUNG'}
+                        </span>
                       </div>
                     </div>
                   ))}

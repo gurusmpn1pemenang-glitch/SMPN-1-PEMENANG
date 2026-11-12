@@ -17,7 +17,7 @@ import {
   School,
   Sparkles,
 } from 'lucide-react';
-import { AppUser, Teacher } from '../types/school';
+import { AppUser, Teacher, SchoolIdentitySettings } from '../types/school';
 import { useClickOutside } from '../utils/useClickOutside';
 
 interface TeacherProfileModalProps {
@@ -25,6 +25,7 @@ interface TeacherProfileModalProps {
   onClose: () => void;
   currentUser: AppUser | null;
   teachers: Teacher[];
+  schoolSettings?: SchoolIdentitySettings;
   onUpdateProfile: (teacherId: string, data: Partial<Teacher>) => Promise<Teacher | null>;
   onChangePassword: (
     teacherId: string,
@@ -38,6 +39,7 @@ export const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({
   onClose,
   currentUser,
   teachers,
+  schoolSettings,
   onUpdateProfile,
   onChangePassword,
 }) => {
@@ -432,13 +434,13 @@ export const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({
               <div className="w-full max-w-[340px] rounded-2xl bg-white shadow-lg overflow-hidden border border-slate-300 text-slate-800">
                 <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-3.5 text-center relative border-b-2 border-amber-400">
                   <div className="font-black tracking-wider text-xs">
-                    SMP NEGERI 2 TANJUNG
+                    {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 TANJUNG'}
                   </div>
                   <p className="text-[9px] uppercase tracking-widest text-teal-200 font-semibold">
                     KARTU IDENTITAS GURU & PEGAWAI
                   </p>
                   <p className="text-[8px] text-teal-300">
-                    Kec. Tanjung, Kab. Lombok Utara, NTB
+                    {schoolSettings?.address || 'Kec. Tanjung, Kab. Lombok Utara, NTB'}
                   </p>
                 </div>
 
@@ -480,14 +482,14 @@ export const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({
                         Aktif Terverifikasi
                       </span>
                       <span className="text-[8px] text-slate-400 block">
-                        SMPN 2 Tanjung
+                        {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-emerald-950 text-emerald-300 text-[8px] py-1 text-center font-medium">
-                  Kartu ini sah untuk presensi harian pendidik SMPN 2 Tanjung
+                  Kartu ini sah untuk presensi harian pendidik {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}
                 </div>
               </div>
 

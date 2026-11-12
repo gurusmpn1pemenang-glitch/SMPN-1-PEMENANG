@@ -15,7 +15,7 @@ import {
   X,
   FileCheck,
 } from 'lucide-react';
-import { LearningJournal, Teacher, UserRole } from '../types/school';
+import { LearningJournal, Teacher, UserRole, SchoolIdentitySettings } from '../types/school';
 import { exportJournalsToExcel, exportJournalsToPDF } from '../utils/exportUtils';
 import { useClickOutside } from '../utils/useClickOutside';
 import { ClassDropdown } from './ClassDropdown';
@@ -26,6 +26,7 @@ interface LearningJournalViewProps {
   onSaveJournal: (journal: LearningJournal) => Promise<void>;
   onDeleteJournal: (id: string) => Promise<void>;
   currentUserName: string;
+  schoolSettings?: SchoolIdentitySettings;
 }
 
 export const LearningJournalView: React.FC<LearningJournalViewProps> = ({
@@ -34,6 +35,7 @@ export const LearningJournalView: React.FC<LearningJournalViewProps> = ({
   onSaveJournal,
   onDeleteJournal,
   currentUserName,
+  schoolSettings,
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -147,7 +149,7 @@ export const LearningJournalView: React.FC<LearningJournalViewProps> = ({
             <span>Jurnal Agenda Pembelajaran Guru</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Dokumentasi digital proses belajar mengajar, materi pokok, dan catatan evaluasi kelas SMPN 2 Tanjung
+            Dokumentasi digital proses belajar mengajar, materi pokok, dan catatan evaluasi kelas {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}
           </p>
         </div>
 
@@ -164,7 +166,8 @@ export const LearningJournalView: React.FC<LearningJournalViewProps> = ({
             onClick={() =>
               exportJournalsToPDF(
                 filteredJournals,
-                filterTeacher === 'SEMUA' ? 'Semua Guru' : filterTeacher
+                filterTeacher === 'SEMUA' ? 'Semua Guru' : filterTeacher,
+                schoolSettings
               )
             }
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold border border-indigo-300 transition-colors cursor-pointer"

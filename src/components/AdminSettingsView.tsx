@@ -31,6 +31,7 @@ import {
   Teacher,
   UserRole,
 } from '../types/school';
+import { DEFAULT_SCHOOL_INFO } from '../utils/exportUtils';
 import { useClickOutside } from '../utils/useClickOutside';
 import { testConnection } from '../firebase/config';
 
@@ -82,11 +83,34 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
   const [newHolidayDate, setNewHolidayDate] = useState('');
   const [newHolidayName, setNewHolidayName] = useState('');
 
+  // School Identity Normalization Helper to prevent undefined/null errors
+  const normalizeSchoolIdentity = (source?: Partial<SchoolIdentitySettings> | null): SchoolIdentitySettings => ({
+    schoolName: source?.schoolName || DEFAULT_SCHOOL_INFO.schoolName,
+    npsn: source?.npsn || DEFAULT_SCHOOL_INFO.npsn,
+    districtName: source?.districtName || DEFAULT_SCHOOL_INFO.districtName,
+    provinceName: source?.provinceName || DEFAULT_SCHOOL_INFO.provinceName,
+    address: source?.address || DEFAULT_SCHOOL_INFO.address,
+    postalCode: source?.postalCode || DEFAULT_SCHOOL_INFO.postalCode,
+    vision: source?.vision || DEFAULT_SCHOOL_INFO.vision,
+    schoolLogoUrl: source?.schoolLogoUrl || DEFAULT_SCHOOL_INFO.schoolLogoUrl,
+    districtLogoUrl: source?.districtLogoUrl || DEFAULT_SCHOOL_INFO.districtLogoUrl,
+    headmasterName: source?.headmasterName || DEFAULT_SCHOOL_INFO.headmasterName,
+    headmasterNip: source?.headmasterNip || DEFAULT_SCHOOL_INFO.headmasterNip,
+    phone: source?.phone || DEFAULT_SCHOOL_INFO.phone || '',
+    email: source?.email || DEFAULT_SCHOOL_INFO.email || '',
+    website: source?.website || DEFAULT_SCHOOL_INFO.website || '',
+    updatedAt: source?.updatedAt || new Date().toISOString(),
+  });
+
   // School Identity Form State
-  const [identitas, setIdentitas] = useState<SchoolIdentitySettings>(schoolSettings);
+  const [identitas, setIdentitas] = useState<SchoolIdentitySettings>(() =>
+    normalizeSchoolIdentity(schoolSettings)
+  );
 
   useEffect(() => {
-    setIdentitas(schoolSettings);
+    if (schoolSettings) {
+      setIdentitas((prev) => normalizeSchoolIdentity({ ...prev, ...schoolSettings }));
+    }
   }, [schoolSettings]);
 
   // Logo file upload refs and processing state
@@ -714,7 +738,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={identitas.schoolName}
+                  value={identitas.schoolName || ''}
                   onChange={(e) => setIdentitas({ ...identitas, schoolName: e.target.value })}
                   disabled={!canEdit}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
@@ -727,9 +751,23 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={identitas.npsn}
+                  value={identitas.npsn || ''}
                   onChange={(e) => setIdentitas({ ...identitas, npsn: e.target.value })}
                   disabled={!canEdit}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Kode Pos
+                </label>
+                <input
+                  type="text"
+                  value={identitas.postalCode || ''}
+                  onChange={(e) => setIdentitas({ ...identitas, postalCode: e.target.value })}
+                  disabled={!canEdit}
+                  placeholder="83352"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
                 />
               </div>
@@ -740,7 +778,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={identitas.districtName}
+                  value={identitas.districtName || ''}
                   onChange={(e) => setIdentitas({ ...identitas, districtName: e.target.value })}
                   disabled={!canEdit}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
@@ -753,7 +791,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={identitas.provinceName}
+                  value={identitas.provinceName || ''}
                   onChange={(e) => setIdentitas({ ...identitas, provinceName: e.target.value })}
                   disabled={!canEdit}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
@@ -766,7 +804,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={identitas.address}
+                  value={identitas.address || ''}
                   onChange={(e) => setIdentitas({ ...identitas, address: e.target.value })}
                   disabled={!canEdit}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
@@ -779,7 +817,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 </label>
                 <textarea
                   rows={2}
-                  value={identitas.vision}
+                  value={identitas.vision || ''}
                   onChange={(e) => setIdentitas({ ...identitas, vision: e.target.value })}
                   disabled={!canEdit}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
@@ -792,7 +830,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={identitas.headmasterName}
+                  value={identitas.headmasterName || ''}
                   onChange={(e) => setIdentitas({ ...identitas, headmasterName: e.target.value })}
                   disabled={!canEdit}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
@@ -805,7 +843,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={identitas.headmasterNip}
+                  value={identitas.headmasterNip || ''}
                   onChange={(e) => setIdentitas({ ...identitas, headmasterNip: e.target.value })}
                   disabled={!canEdit}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-mono text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
@@ -912,7 +950,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                         <input
                           type="text"
                           placeholder="https://... (URL gambar logo sekolah)"
-                          value={identitas.schoolLogoUrl.startsWith('data:') ? '' : identitas.schoolLogoUrl}
+                          value={(identitas.schoolLogoUrl || '').startsWith('data:') ? '' : (identitas.schoolLogoUrl || '')}
                           onChange={(e) => setIdentitas({ ...identitas, schoolLogoUrl: e.target.value })}
                           disabled={!canEdit}
                           className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-emerald-500 disabled:bg-slate-100"
@@ -956,7 +994,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                     ) : (
                       <div className="text-center text-slate-400">
                         <ImageIcon className="w-6 h-6 mx-auto mb-1 text-slate-300" />
-                        <span className="text-[9px] font-semibold block">Logo Pemda</span>
+                        <span className="text-[9px] font-semibold block">Logo Pemkab</span>
                       </div>
                     )}
                   </div>
@@ -1015,7 +1053,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                         <input
                           type="text"
                           placeholder="https://... (URL gambar logo kabupaten)"
-                          value={identitas.districtLogoUrl.startsWith('data:') ? '' : identitas.districtLogoUrl}
+                          value={(identitas.districtLogoUrl || '').startsWith('data:') ? '' : (identitas.districtLogoUrl || '')}
                           onChange={(e) => setIdentitas({ ...identitas, districtLogoUrl: e.target.value })}
                           disabled={!canEdit}
                           className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
@@ -1075,19 +1113,19 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                   {/* Center: Kop Surat Texts */}
                   <div className="flex-1 text-center space-y-0.5 min-w-0">
                     <p className="text-[9.5px] uppercase font-bold tracking-wider text-slate-600 leading-tight">
-                      PEMERINTAH {identitas.districtName.toUpperCase()}
+                      PEMERINTAH {(identitas.districtName || 'Kabupaten Lombok Utara').toUpperCase()}
                     </p>
                     <p className="text-[9px] uppercase font-bold tracking-wider text-slate-700 leading-tight">
                       DINAS PENDIDIKAN KEBUDAYAAN KEPEMUDAAN DAN OLAHRAGA
                     </p>
                     <h3 className="text-xs font-black text-emerald-900 tracking-wide truncate">
-                      {identitas.schoolName.toUpperCase()}
+                      {(identitas.schoolName || 'SMP NEGERI 2 TANJUNG').toUpperCase()}
                     </h3>
                     <p className="text-[8px] text-slate-500 italic truncate">
-                      {identitas.address}
+                      {identitas.address || 'Jl. Pariwisata Tanjung - Sire'}
                     </p>
                     <p className="text-[8px] text-slate-500 font-mono">
-                      NPSN: {identitas.npsn} • Kode Pos: {identitas.postalCode}
+                      NPSN: {identitas.npsn || '-'} • Kode Pos: {identitas.postalCode || '-'}
                     </p>
                   </div>
 
@@ -1122,7 +1160,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                   Visi Lembaga:
                 </span>
                 <p className="italic text-[11px] leading-relaxed">
-                  "{identitas.vision}"
+                  "{identitas.vision || '-'}"
                 </p>
               </div>
 
@@ -1131,9 +1169,9 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 <span className="text-[10px] font-bold text-slate-500 uppercase">
                   Pimpinan Sekolah:
                 </span>
-                <p className="font-bold text-slate-800">{identitas.headmasterName}</p>
+                <p className="font-bold text-slate-800">{identitas.headmasterName || '-'}</p>
                 <p className="font-mono text-[11px] text-slate-500">
-                  NIP. {identitas.headmasterNip}
+                  NIP. {identitas.headmasterNip || '-'}
                 </p>
               </div>
             </div>

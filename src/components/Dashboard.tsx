@@ -16,7 +16,7 @@ import {
   CalendarDays,
   Zap,
 } from 'lucide-react';
-import { Student, Teacher, Attendance, LearningJournal } from '../types/school';
+import { Student, Teacher, Attendance, LearningJournal, SchoolIdentitySettings } from '../types/school';
 
 interface DashboardProps {
   students: Student[];
@@ -25,6 +25,7 @@ interface DashboardProps {
   journals: LearningJournal[];
   onNavigate: (tab: string) => void;
   onOpenScanner: () => void;
+  schoolSettings?: SchoolIdentitySettings;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -34,6 +35,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   journals,
   onNavigate,
   onOpenScanner,
+  schoolSettings,
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -322,7 +324,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 Tingkat Kehadiran Per Rombel / Kelas
               </h2>
               <p className="text-xs text-slate-500">
-                Monitoring keaktifan presensi kelas 7, 8, dan 9 SMPN 2 Tanjung
+                Monitoring keaktifan presensi kelas 7, 8, dan 9 {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}
               </p>
             </div>
             <button

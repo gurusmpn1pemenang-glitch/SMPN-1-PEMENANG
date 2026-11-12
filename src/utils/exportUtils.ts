@@ -6,7 +6,7 @@ import { Attendance, LearningJournal, Student, MonthlyReport, SchoolIdentitySett
 
 // Default official school letterhead info
 export const DEFAULT_SCHOOL_INFO: SchoolIdentitySettings = {
-  schoolName: 'SMP NEGERI 2 TANJUNG',
+  schoolName: 'SMP NEGERI 1 TANJUNG',
   npsn: '50205566',
   districtName: 'Kabupaten Lombok Utara',
   provinceName: 'Nusa Tenggara Barat',
@@ -18,8 +18,8 @@ export const DEFAULT_SCHOOL_INFO: SchoolIdentitySettings = {
   headmasterName: 'Drs. H. Suhartono, M.Pd.',
   headmasterNip: '19760812 200212 1 003',
   phone: '(0370) 6123456',
-  email: 'smpn2tanjung@gmail.com',
-  website: 'https://smpn2tanjung.sch.id',
+  email: 'smpn1tanjung@gmail.com',
+  website: 'https://smpn1tanjung.sch.id',
   updatedAt: new Date().toISOString(),
 };
 
@@ -28,10 +28,10 @@ export const SCHOOL_INFO = DEFAULT_SCHOOL_INFO;
 // ================= EXCEL TEMPLATE FOR STUDENT IMPORT =================
 /**
  * Generates and downloads the official Excel template for bulk student import
- * with mandatory column structure specified by SMPN 2 Tanjung:
+ * with mandatory column structure specified by SMPN 1 Tanjung:
  * NISN, NIS, Nama, Kelas, Jenis Kelamin, Tempat & Tanggal Lahir, Alamat, No HP Orang Tua, Nama Orang Tua, Link Drive Foto Siswa
  */
-export function downloadStudentImportTemplate(filename = 'Template_Import_Siswa_SMPN2Tanjung.xlsx') {
+export function downloadStudentImportTemplate(filename = 'Template_Import_Siswa_SMPN1Tanjung.xlsx') {
   const sampleData = [
     {
       'NISN': '0098765431',
@@ -95,7 +95,7 @@ export function downloadStudentImportTemplate(filename = 'Template_Import_Siswa_
 // ================= EXCEL EXPORTS =================
 export function exportAttendanceToExcel(
   attendances: Attendance[],
-  filename = 'Rekap_Presensi_SMPN2Tanjung.xlsx'
+  filename = 'Rekap_Presensi_SMPN1Tanjung.xlsx'
 ) {
   const data = attendances.map((att, index) => ({
     'No': index + 1,
@@ -120,7 +120,7 @@ export function exportAttendanceToExcel(
 
 export function exportJournalsToExcel(
   journals: LearningJournal[],
-  filename = 'Jurnal_Pembelajaran_SMPN2Tanjung.xlsx'
+  filename = 'Jurnal_Pembelajaran_SMPN1Tanjung.xlsx'
 ) {
   const data = journals.map((j, index) => ({
     'No': index + 1,
@@ -143,7 +143,7 @@ export function exportJournalsToExcel(
 
 export function exportStudentsToExcel(
   students: Student[],
-  filename = 'Data_Siswa_SMPN2Tanjung.xlsx'
+  filename = 'Data_Siswa_SMPN1Tanjung.xlsx'
 ) {
   const data = students.map((s, index) => ({
     'No': index + 1,
@@ -200,7 +200,7 @@ export function exportAttendanceToPDF(
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.text(schoolInfo.address, 105, 31, { align: 'center' });
-  doc.text(`Email: ${schoolInfo.email || 'smpn2tanjung@gmail.com'} | NPSN: ${schoolInfo.npsn}`, 105, 35, { align: 'center' });
+  doc.text(`Email: ${schoolInfo.email || 'smpn1tanjung@gmail.com'} | NPSN: ${schoolInfo.npsn}`, 105, 35, { align: 'center' });
 
   // Divider lines
   doc.setLineWidth(0.8);
@@ -627,7 +627,7 @@ export async function exportKtsBatchToPdf(
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(7.5);
-    doc.text(school.schoolName || 'SMP NEGERI 2 TANJUNG', textStartX, cardY + 8);
+    doc.text(school.schoolName || 'SMP NEGERI 1 TANJUNG', textStartX, cardY + 8);
 
     doc.setTextColor(251, 191, 36); // gold
     doc.setFontSize(5.5);

@@ -44,6 +44,7 @@ interface SidebarProps {
   setIsOpenMobile: (open: boolean) => void;
   schoolSettings?: SchoolIdentitySettings;
   onOpenProfile?: () => void;
+  onLogout?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -59,6 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsOpenMobile,
   schoolSettings,
   onOpenProfile,
+  onLogout,
 }) => {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
@@ -555,6 +557,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
             <span className="text-emerald-400 font-mono">Anti-Loop</span>
           </div>
+
+          {/* Tombol Keluar (Logout) Utama */}
+          {currentUser && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onLogout) {
+                  onLogout();
+                } else {
+                  handleSignOut();
+                }
+              }}
+              className="w-full mt-2 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 text-rose-300 hover:text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+              title="Keluar dari Aplikasi (Logout)"
+            >
+              <LogOut className="w-4 h-4 text-rose-400" />
+              <span>Keluar dari Sistem</span>
+            </button>
+          )}
         </div>
       </aside>
     </>
