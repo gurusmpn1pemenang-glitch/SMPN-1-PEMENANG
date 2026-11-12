@@ -535,6 +535,7 @@ export default function App() {
                   onDeleteStudent={handleDeleteStudent}
                   onDeleteStudentsBatch={handleDeleteStudentsBatch}
                   userRole={currentUser?.role || 'guru'}
+                  schoolSettings={schoolSettings}
                 />
               )}
 

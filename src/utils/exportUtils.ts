@@ -177,6 +177,17 @@ export function exportAttendanceToPDF(
   const doc = new jsPDF('p', 'mm', 'a4');
 
   // Letterhead (Kop Surat)
+  if (schoolInfo.districtLogoUrl && schoolInfo.districtLogoUrl.startsWith('data:image')) {
+    try {
+      doc.addImage(schoolInfo.districtLogoUrl, 16, 14, 20, 20);
+    } catch {}
+  }
+  if (schoolInfo.schoolLogoUrl && schoolInfo.schoolLogoUrl.startsWith('data:image')) {
+    try {
+      doc.addImage(schoolInfo.schoolLogoUrl, 174, 14, 20, 20);
+    } catch {}
+  }
+
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text(`PEMERINTAH ${schoolInfo.districtName.toUpperCase()}`, 105, 14, { align: 'center' });
@@ -297,6 +308,17 @@ export function exportJournalsToPDF(
   const doc = new jsPDF('l', 'mm', 'a4');
 
   // Letterhead
+  if (schoolInfo.districtLogoUrl && schoolInfo.districtLogoUrl.startsWith('data:image')) {
+    try {
+      doc.addImage(schoolInfo.districtLogoUrl, 18, 10, 18, 18);
+    } catch {}
+  }
+  if (schoolInfo.schoolLogoUrl && schoolInfo.schoolLogoUrl.startsWith('data:image')) {
+    try {
+      doc.addImage(schoolInfo.schoolLogoUrl, 260, 10, 18, 18);
+    } catch {}
+  }
+
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text(`PEMERINTAH ${schoolInfo.districtName.toUpperCase()}`, 148, 12, { align: 'center' });
@@ -589,15 +611,23 @@ export async function exportKtsBatchToPdf(
     doc.setFillColor(251, 191, 36); // amber-400
     doc.rect(cardX, cardY + 11, cardW, 0.8, 'F');
 
-    // Text in Kop
+    // Text & Logo in Kop
+    let textStartX = cardX + 3;
+    if (school.schoolLogoUrl && school.schoolLogoUrl.startsWith('data:image')) {
+      try {
+        doc.addImage(school.schoolLogoUrl, cardX + 2.5, cardY + 2, 7, 7);
+        textStartX = cardX + 10.5;
+      } catch {}
+    }
+
     doc.setTextColor(204, 251, 241); // teal-100
     doc.setFontSize(5);
     doc.setFont('helvetica', 'bold');
-    doc.text('PEMKAB LOMBOK UTARA • DISDIKPORA', cardX + 3, cardY + 4);
+    doc.text(`${(school.districtName || 'PEMKAB LOMBOK UTARA').toUpperCase()} • DISDIKPORA`, textStartX, cardY + 4);
 
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.text(school.schoolName || 'SMP NEGERI 2 TANJUNG', cardX + 3, cardY + 8);
+    doc.setFontSize(7.5);
+    doc.text(school.schoolName || 'SMP NEGERI 2 TANJUNG', textStartX, cardY + 8);
 
     doc.setTextColor(251, 191, 36); // gold
     doc.setFontSize(5.5);

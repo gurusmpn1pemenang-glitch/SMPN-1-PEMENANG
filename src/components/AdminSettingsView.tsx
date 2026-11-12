@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Settings,
   Clock,
@@ -21,6 +21,8 @@ import {
   Database,
   Cloud,
   RefreshCw,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import {
   SchoolIdentitySettings,
@@ -82,6 +84,113 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
 
   // School Identity Form State
   const [identitas, setIdentitas] = useState<SchoolIdentitySettings>(schoolSettings);
+
+  useEffect(() => {
+    setIdentitas(schoolSettings);
+  }, [schoolSettings]);
+
+  // Logo file upload refs and processing state
+  const schoolLogoInputRef = useRef<HTMLInputElement>(null);
+  const districtLogoInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessingLogo, setIsProcessingLogo] = useState<'school' | 'district' | null>(null);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+
+  const processAndSetLogo = async (file: File, type: 'school' | 'district') => {
+    if (!file) return;
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'];
+    if (!validTypes.includes(file.type)) {
+      setLogoUploadError('Format berkas tidak didukung. Harap pilih gambar format PNG, JPG, WEBP, atau SVG.');
+      setTimeout(() => setLogoUploadError(null), 4000);
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoUploadError('Ukuran berkas logo melebihi 5 MB. Harap gunakan berkas di bawah 5 MB.');
+      setTimeout(() => setLogoUploadError(null), 4000);
+      return;
+    }
+
+    setIsProcessingLogo(type);
+    try {
+      if (file.type === 'image/svg+xml') {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const res = reader.result as string;
+          if (type === 'school') {
+            setIdentitas((prev) => ({ ...prev, schoolLogoUrl: res }));
+          } else {
+            setIdentitas((prev) => ({ ...prev, districtLogoUrl: res }));
+          }
+          setIsProcessingLogo(null);
+        };
+        reader.onerror = () => setIsProcessingLogo(null);
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      // Bitmap optimization using canvas for fast cloud sync and crystal-clear letterhead rendering
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 360;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            const raw = e.target?.result as string;
+            if (type === 'school') {
+              setIdentitas((prev) => ({ ...prev, schoolLogoUrl: raw }));
+            } else {
+              setIdentitas((prev) => ({ ...prev, districtLogoUrl: raw }));
+            }
+            setIsProcessingLogo(null);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/png', 0.92);
+          if (type === 'school') {
+            setIdentitas((prev) => ({ ...prev, schoolLogoUrl: dataUrl }));
+          } else {
+            setIdentitas((prev) => ({ ...prev, districtLogoUrl: dataUrl }));
+          }
+          setIsProcessingLogo(null);
+        };
+        img.onerror = () => {
+          const raw = e.target?.result as string;
+          if (type === 'school') {
+            setIdentitas((prev) => ({ ...prev, schoolLogoUrl: raw }));
+          } else {
+            setIdentitas((prev) => ({ ...prev, districtLogoUrl: raw }));
+          }
+          setIsProcessingLogo(null);
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => setIsProcessingLogo(null);
+      reader.readAsDataURL(file);
+    } catch {
+      setIsProcessingLogo(null);
+    }
+  };
 
   // Reset Password Modal State
   const [resetModalTeacher, setResetModalTeacher] = useState<Teacher | null>(null);
@@ -703,32 +812,218 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  URL Logo Sekolah (Opsional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="https://..."
-                  value={identitas.schoolLogoUrl}
-                  onChange={(e) => setIdentitas({ ...identitas, schoolLogoUrl: e.target.value })}
-                  disabled={!canEdit}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
-                />
+              {/* Notification error upload */}
+              {logoUploadError && (
+                <div className="sm:col-span-2 p-3 rounded-lg bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{logoUploadError}</span>
+                </div>
+              )}
+
+              {/* 1. INPUT UPLOAD LOGO SEKOLAH DARI PERANGKAT */}
+              <div className="sm:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <School className="w-4 h-4 text-emerald-700" />
+                    <span className="text-xs font-bold text-slate-800">
+                      Logo Resmi Sekolah (Unggah dari Perangkat)
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                    identitas.schoolLogoUrl
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : 'bg-slate-200 text-slate-600 border-slate-300'
+                  }`}>
+                    {identitas.schoolLogoUrl ? 'Logo Terpasang' : 'Belum Ada Logo'}
+                  </span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  {/* Thumbnail Pratinjau */}
+                  <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-white flex items-center justify-center p-1.5 shrink-0 overflow-hidden shadow-2xs">
+                    {identitas.schoolLogoUrl ? (
+                      <img
+                        src={identitas.schoolLogoUrl}
+                        alt="Logo Sekolah"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="text-center text-slate-400">
+                        <ImageIcon className="w-6 h-6 mx-auto mb-1 text-slate-300" />
+                        <span className="text-[9px] font-semibold block">Logo Sekolah</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Kontrol Upload dari Perangkat */}
+                  <div className="flex-1 space-y-2 w-full">
+                    <input
+                      type="file"
+                      ref={schoolLogoInputRef}
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) processAndSetLogo(file, 'school');
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        disabled={!canEdit || isProcessingLogo === 'school'}
+                        onClick={() => schoolLogoInputRef.current?.click()}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                      >
+                        {isProcessingLogo === 'school' ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5" />
+                        )}
+                        <span>Pilih Logo Sekolah dari Perangkat</span>
+                      </button>
+
+                      {identitas.schoolLogoUrl && canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => setIdentitas((prev) => ({ ...prev, schoolLogoUrl: '' }))}
+                          className="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200 transition-colors cursor-pointer"
+                          title="Hapus Logo Sekolah"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-[10.5px] text-slate-500">
+                      Format didukung: PNG, JPG, WEBP, SVG. Gambar otomatis dioptimalkan untuk kop surat & kartu KTS.
+                    </p>
+
+                    <details className="text-[11px] text-slate-600">
+                      <summary className="cursor-pointer hover:text-emerald-700 font-medium">
+                        Atau gunakan tautan URL online...
+                      </summary>
+                      <div className="mt-1.5">
+                        <input
+                          type="text"
+                          placeholder="https://... (URL gambar logo sekolah)"
+                          value={identitas.schoolLogoUrl.startsWith('data:') ? '' : identitas.schoolLogoUrl}
+                          onChange={(e) => setIdentitas({ ...identitas, schoolLogoUrl: e.target.value })}
+                          disabled={!canEdit}
+                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-emerald-500 disabled:bg-slate-100"
+                        />
+                      </div>
+                    </details>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  URL Logo Kabupaten (Opsional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="https://..."
-                  value={identitas.districtLogoUrl}
-                  onChange={(e) => setIdentitas({ ...identitas, districtLogoUrl: e.target.value })}
-                  disabled={!canEdit}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden disabled:bg-slate-100"
-                />
+              {/* 2. INPUT UPLOAD LOGO KABUPATEN DARI PERANGKAT */}
+              <div className="sm:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-teal-700" />
+                    <span className="text-xs font-bold text-slate-800">
+                      Logo Pemerintah Kabupaten / Daerah (Unggah dari Perangkat)
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                    identitas.districtLogoUrl
+                      ? 'bg-teal-100 text-teal-800 border-teal-300'
+                      : 'bg-slate-200 text-slate-600 border-slate-300'
+                  }`}>
+                    {identitas.districtLogoUrl ? 'Logo Terpasang' : 'Belum Ada Logo'}
+                  </span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  {/* Thumbnail Pratinjau */}
+                  <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-white flex items-center justify-center p-1.5 shrink-0 overflow-hidden shadow-2xs">
+                    {identitas.districtLogoUrl ? (
+                      <img
+                        src={identitas.districtLogoUrl}
+                        alt="Logo Kabupaten"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="text-center text-slate-400">
+                        <ImageIcon className="w-6 h-6 mx-auto mb-1 text-slate-300" />
+                        <span className="text-[9px] font-semibold block">Logo Pemda</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Kontrol Upload dari Perangkat */}
+                  <div className="flex-1 space-y-2 w-full">
+                    <input
+                      type="file"
+                      ref={districtLogoInputRef}
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) processAndSetLogo(file, 'district');
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                    />
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        disabled={!canEdit || isProcessingLogo === 'district'}
+                        onClick={() => districtLogoInputRef.current?.click()}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-600 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                      >
+                        {isProcessingLogo === 'district' ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5" />
+                        )}
+                        <span>Pilih Logo Kabupaten dari Perangkat</span>
+                      </button>
+
+                      {identitas.districtLogoUrl && canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => setIdentitas((prev) => ({ ...prev, districtLogoUrl: '' }))}
+                          className="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200 transition-colors cursor-pointer"
+                          title="Hapus Logo Kabupaten"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-[10.5px] text-slate-500">
+                      Pilih lambang resmi daerah/pemkab dari komputer/HP (PNG, JPG, WEBP, SVG).
+                    </p>
+
+                    <details className="text-[11px] text-slate-600">
+                      <summary className="cursor-pointer hover:text-teal-700 font-medium">
+                        Atau gunakan tautan URL online...
+                      </summary>
+                      <div className="mt-1.5">
+                        <input
+                          type="text"
+                          placeholder="https://... (URL gambar logo kabupaten)"
+                          value={identitas.districtLogoUrl.startsWith('data:') ? '' : identitas.districtLogoUrl}
+                          onChange={(e) => setIdentitas({ ...identitas, districtLogoUrl: e.target.value })}
+                          disabled={!canEdit}
+                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:ring-1 focus:ring-teal-500 disabled:bg-slate-100"
+                        />
+                      </div>
+                    </details>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -740,7 +1035,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                   className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
-                  <span>{isSaving ? 'Menyimpan...' : 'Simpan Identitas Sekolah'}</span>
+                  <span>{isSaving ? 'Menyimpan...' : 'Simpan Identitas & Logo Sekolah'}</span>
                 </button>
               </div>
             )}
@@ -756,25 +1051,66 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                 </h4>
               </div>
 
-              {/* Document Header Preview Box */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-300 text-center space-y-1">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
-                  PEMERINTAH {identitas.districtName.toUpperCase()}
-                </p>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-600">
-                  DINAS PENDIDIKAN KEBUDAYAAN KEPEMUDAAN DAN OLAHRAGA
-                </p>
-                <h3 className="text-sm font-extrabold text-emerald-900 tracking-wide">
-                  {identitas.schoolName.toUpperCase()}
-                </h3>
-                <p className="text-[9px] text-slate-500 italic">
-                  {identitas.address}
-                </p>
-                <p className="text-[9px] text-slate-500 font-mono">
-                  NPSN: {identitas.npsn} • Kode Pos: {identitas.postalCode}
-                </p>
+              {/* Document Header Preview Box dengan Logo Pemkab & Logo Sekolah */}
+              <div className="bg-white p-3.5 rounded-xl border border-slate-300 text-center space-y-1 shadow-2xs">
+                <div className="flex items-center justify-between gap-2.5 mb-1.5">
+                  {/* Left Logo: Kabupaten */}
+                  <div className="w-13 h-13 shrink-0 flex items-center justify-center p-0.5 bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+                    {identitas.districtLogoUrl ? (
+                      <img
+                        src={identitas.districtLogoUrl}
+                        alt="Logo Pemkab"
+                        className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="text-[7.5px] text-slate-400 font-bold text-center leading-tight">
+                        Logo Pemkab
+                      </div>
+                    )}
+                  </div>
 
-                <div className="pt-2 border-t border-slate-300 mt-2">
+                  {/* Center: Kop Surat Texts */}
+                  <div className="flex-1 text-center space-y-0.5 min-w-0">
+                    <p className="text-[9.5px] uppercase font-bold tracking-wider text-slate-600 leading-tight">
+                      PEMERINTAH {identitas.districtName.toUpperCase()}
+                    </p>
+                    <p className="text-[9px] uppercase font-bold tracking-wider text-slate-700 leading-tight">
+                      DINAS PENDIDIKAN KEBUDAYAAN KEPEMUDAAN DAN OLAHRAGA
+                    </p>
+                    <h3 className="text-xs font-black text-emerald-900 tracking-wide truncate">
+                      {identitas.schoolName.toUpperCase()}
+                    </h3>
+                    <p className="text-[8px] text-slate-500 italic truncate">
+                      {identitas.address}
+                    </p>
+                    <p className="text-[8px] text-slate-500 font-mono">
+                      NPSN: {identitas.npsn} • Kode Pos: {identitas.postalCode}
+                    </p>
+                  </div>
+
+                  {/* Right Logo: Sekolah */}
+                  <div className="w-13 h-13 shrink-0 flex items-center justify-center p-0.5 bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+                    {identitas.schoolLogoUrl ? (
+                      <img
+                        src={identitas.schoolLogoUrl}
+                        alt="Logo Sekolah"
+                        className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="text-[7.5px] text-slate-400 font-bold text-center leading-tight">
+                        Logo Sekolah
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-1 border-t-2 border-slate-900 mt-1">
                   <div className="h-0.5 bg-slate-900 w-full mb-0.5" />
                   <div className="h-px bg-slate-500 w-full" />
                 </div>

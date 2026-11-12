@@ -225,10 +225,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* 1. App Name & School Branding Header */}
         <div className="p-5 border-b border-slate-800/80 bg-slate-950/60 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 p-0.5 shadow-lg shadow-emerald-950 flex items-center justify-center">
-              <div className="w-full h-full bg-slate-950/40 rounded-[10px] flex items-center justify-center">
-                <School className="w-5 h-5 text-emerald-300" />
-              </div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 p-0.5 shadow-lg shadow-emerald-950 flex items-center justify-center overflow-hidden shrink-0">
+              {schoolSettings?.schoolLogoUrl ? (
+                <img
+                  src={schoolSettings.schoolLogoUrl}
+                  alt="Logo Sekolah"
+                  className="w-full h-full object-contain rounded-[10px] bg-white/10 p-0.5"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-slate-950/40 rounded-[10px] flex items-center justify-center">
+                  <School className="w-5 h-5 text-emerald-300" />
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-1.5">

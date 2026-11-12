@@ -23,7 +23,7 @@ import {
   ShieldAlert,
   Sparkles,
 } from 'lucide-react';
-import { Student, Gender, StudentStatus, UserRole } from '../types/school';
+import { Student, Gender, StudentStatus, UserRole, SchoolIdentitySettings } from '../types/school';
 import {
   exportStudentsToExcel,
   downloadStudentImportTemplate,
@@ -40,6 +40,7 @@ interface StudentManagerProps {
   onDeleteStudent: (id: string) => Promise<void>;
   onDeleteStudentsBatch?: (ids: string[]) => Promise<void>;
   userRole: UserRole;
+  schoolSettings?: SchoolIdentitySettings;
 }
 
 export const StudentManager: React.FC<StudentManagerProps> = ({
@@ -49,6 +50,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
   onDeleteStudent,
   onDeleteStudentsBatch,
   userRole,
+  schoolSettings,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('SEMUA');
@@ -255,6 +257,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
       await exportKtsBatchToPdf(filteredStudents, {
         filterClass: selectedClass,
         searchTerm: searchTerm,
+        schoolInfo: schoolSettings || DEFAULT_SCHOOL_INFO,
         qrMap: batchQrCodes,
       });
     } catch (err) {
@@ -1292,13 +1295,21 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                 {/* Kop Surat KTS */}
                 <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white px-3 py-1.5 flex items-center justify-between border-b-2 border-amber-400">
                   <div className="flex items-center gap-2">
-                    <School className="w-5 h-5 text-emerald-300 shrink-0" />
+                    {schoolSettings?.schoolLogoUrl ? (
+                      <img
+                        src={schoolSettings.schoolLogoUrl}
+                        alt="Logo Sekolah"
+                        className="w-5 h-5 object-contain shrink-0 rounded-xs bg-white/20 p-0.5"
+                      />
+                    ) : (
+                      <School className="w-5 h-5 text-emerald-300 shrink-0" />
+                    )}
                     <div className="leading-tight">
                       <div className="text-[7.5px] font-bold uppercase tracking-wider text-teal-200">
-                        PEMKAB LOMBOK UTARA • DISDIKPORA
+                        {schoolSettings?.districtName ? schoolSettings.districtName.toUpperCase() : 'PEMKAB LOMBOK UTARA'} • DISDIKPORA
                       </div>
                       <div className="text-[11px] font-black tracking-tight text-white">
-                        SMP NEGERI 2 TANJUNG
+                        {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 2 TANJUNG'}
                       </div>
                     </div>
                   </div>
@@ -1306,7 +1317,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                     <span className="inline-block px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 font-black text-[7.5px] uppercase tracking-wider">
                       KTS DIGITAL
                     </span>
-                    <div className="text-[7px] text-teal-200 font-mono">NPSN: 50205566</div>
+                    <div className="text-[7px] text-teal-200 font-mono">
+                      NPSN: {schoolSettings?.npsn || '50205566'}
+                    </div>
                   </div>
                 </div>
 
@@ -1533,13 +1546,21 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                       {/* Kop KTS */}
                       <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white px-2.5 py-1.5 flex items-center justify-between border-b-2 border-amber-400">
                         <div className="flex items-center gap-1.5">
-                          <School className="w-4 h-4 text-emerald-300 shrink-0" />
+                          {schoolSettings?.schoolLogoUrl ? (
+                            <img
+                              src={schoolSettings.schoolLogoUrl}
+                              alt="Logo Sekolah"
+                              className="w-4 h-4 object-contain shrink-0 rounded-xs bg-white/20 p-0.5"
+                            />
+                          ) : (
+                            <School className="w-4 h-4 text-emerald-300 shrink-0" />
+                          )}
                           <div className="leading-tight">
                             <div className="text-[6.5px] font-bold uppercase tracking-wider text-teal-200">
-                              PEMKAB LOMBOK UTARA • DISDIKPORA
+                              {schoolSettings?.districtName ? schoolSettings.districtName.toUpperCase() : 'PEMKAB LOMBOK UTARA'} • DISDIKPORA
                             </div>
                             <div className="text-[9.5px] font-black tracking-tight text-white">
-                              SMP NEGERI 2 TANJUNG
+                              {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 2 TANJUNG'}
                             </div>
                           </div>
                         </div>
@@ -1547,7 +1568,9 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                           <span className="inline-block px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-black text-[7px] uppercase tracking-wider">
                             KTS DIGITAL
                           </span>
-                          <div className="text-[6.5px] text-teal-200 font-mono">NPSN: 50205566</div>
+                          <div className="text-[6.5px] text-teal-200 font-mono">
+                            NPSN: {schoolSettings?.npsn || '50205566'}
+                          </div>
                         </div>
                       </div>
 

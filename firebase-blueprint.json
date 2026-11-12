@@ -274,6 +274,34 @@
         }
       },
       "required": ["monthYear", "className", "totalStudents", "averageAttendanceRate"]
+    },
+    "SchoolSettings": {
+      "title": "SchoolSettings",
+      "description": "School identity and operational parameters",
+      "type": "object",
+      "properties": {
+        "schoolName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "npsn": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "districtName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "schoolLogoUrl": {
+          "type": "string"
+        },
+        "districtLogoUrl": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      }
     }
   },
   "firestore": {
@@ -304,6 +332,10 @@
     "/monthly_reports/{reportId}": {
       "schema": "MonthlyReport",
       "description": "Monthly evaluated attendance reports"
+    },
+    "/settings/{settingId}": {
+      "schema": "SchoolSettings",
+      "description": "School identity, operational parameters, and official logos"
     }
   }
 }
