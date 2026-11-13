@@ -789,12 +789,65 @@ export async function deleteJournal(journalId: string): Promise<void> {
 }
 
 // ================= SCHOOL IDENTITY & OPERATIONAL SETTINGS =================
+function normalizeLegacySchoolSettings(raw?: Partial<SchoolIdentitySettings> | null): {
+  normalized: SchoolIdentitySettings;
+  didMigrate: boolean;
+} {
+  const merged: SchoolIdentitySettings = {
+    ...DEFAULT_SCHOOL_INFO,
+    ...(raw || {}),
+  };
+  let didMigrate = false;
+
+  const trimmedName = (merged.schoolName || '').trim();
+  if (
+    !trimmedName ||
+    /^smp\s*(negeri|n)\s*2\s*tanjung$/i.test(trimmedName) ||
+    /^smp\s*(negeri|n)\s*1\s*tanjung$/i.test(trimmedName)
+  ) {
+    merged.schoolName = DEFAULT_SCHOOL_INFO.schoolName;
+    if (trimmedName !== DEFAULT_SCHOOL_INFO.schoolName) {
+      didMigrate = true;
+    }
+  }
+
+  const trimmedAddr = (merged.address || '').trim();
+  if (
+    !trimmedAddr ||
+    /^jl\.?\s*raya\s*tanjung/i.test(trimmedAddr)
+  ) {
+    merged.address = DEFAULT_SCHOOL_INFO.address;
+    if (trimmedAddr !== DEFAULT_SCHOOL_INFO.address) {
+      didMigrate = true;
+    }
+  }
+
+  const trimmedEmail = (merged.email || '').trim().toLowerCase();
+  if (trimmedEmail === 'smpn2tanjung@gmail.com' || trimmedEmail === 'smpn1tanjung@gmail.com') {
+    merged.email = DEFAULT_SCHOOL_INFO.email;
+    didMigrate = true;
+  }
+
+  const trimmedWeb = (merged.website || '').trim().toLowerCase();
+  if (trimmedWeb === 'https://smpn2tanjung.sch.id' || trimmedWeb === 'https://smpn1tanjung.sch.id') {
+    merged.website = DEFAULT_SCHOOL_INFO.website;
+    didMigrate = true;
+  }
+
+  return { normalized: merged, didMigrate };
+}
+
 export async function getSchoolSettings(): Promise<SchoolIdentitySettings> {
   const cached = localStorage.getItem(STORAGE_KEYS.SCHOOL_SETTINGS);
   let localSettings: SchoolIdentitySettings = DEFAULT_SCHOOL_INFO;
   if (cached) {
     try {
-      localSettings = JSON.parse(cached);
+      const parsed = JSON.parse(cached) as Partial<SchoolIdentitySettings>;
+      const { normalized, didMigrate } = normalizeLegacySchoolSettings(parsed);
+      localSettings = normalized;
+      if (didMigrate) {
+        localStorage.setItem(STORAGE_KEYS.SCHOOL_SETTINGS, JSON.stringify(localSettings));
+      }
     } catch {
       localSettings = DEFAULT_SCHOOL_INFO;
     }
@@ -809,9 +862,13 @@ export async function getSchoolSettings(): Promise<SchoolIdentitySettings> {
     const snap = await getDocs(query(colRef, limit(10)));
     for (const d of snap.docs) {
       if (d.id === 'school_identity') {
-        const data = d.data() as SchoolIdentitySettings;
-        localStorage.setItem(STORAGE_KEYS.SCHOOL_SETTINGS, JSON.stringify(data));
-        return data;
+        const rawData = d.data() as Partial<SchoolIdentitySettings>;
+        const { normalized, didMigrate } = normalizeLegacySchoolSettings(rawData);
+        localStorage.setItem(STORAGE_KEYS.SCHOOL_SETTINGS, JSON.stringify(normalized));
+        if (didMigrate) {
+          setDoc(doc(db, 'settings', 'school_identity'), normalized).catch(() => {});
+        }
+        return normalized;
       }
     }
     // Seed default if empty in cloud
@@ -1054,7 +1111,8 @@ export function subscribeToSettingsRealtime(
       (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           if (change.doc.id === 'school_identity') {
-            onUpdate('identity', change.doc.data());
+            const { normalized } = normalizeLegacySchoolSettings(change.doc.data());
+            onUpdate('identity', normalized);
           } else if (change.doc.id === 'operational') {
             onUpdate('operational', change.doc.data());
           }

@@ -18,7 +18,7 @@ import {
   User,
   AlertTriangle,
 } from 'lucide-react';
-import { Attendance, Student, Teacher, AttendanceStatus, TargetType } from '../types/school';
+import { Attendance, Student, Teacher, AttendanceStatus, TargetType, SchoolIdentitySettings } from '../types/school';
 import { exportAttendanceToExcel, exportAttendanceToPDF } from '../utils/exportUtils';
 import { useClickOutside } from '../utils/useClickOutside';
 import { ClassDropdown } from './ClassDropdown';
@@ -30,6 +30,7 @@ interface AttendanceTableProps {
   onRecordAttendance: (att: Attendance) => Promise<void>;
   onDeleteAttendance: (id: string) => Promise<void>;
   recordedBy: string;
+  schoolSettings?: SchoolIdentitySettings;
 }
 
 export const AttendanceTable: React.FC<AttendanceTableProps> = ({
@@ -39,6 +40,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
   onRecordAttendance,
   onDeleteAttendance,
   recordedBy,
+  schoolSettings,
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
   const [filterDate, setFilterDate] = useState<string>(todayStr);
@@ -179,7 +181,7 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
             onClick={() =>
               exportAttendanceToExcel(
                 filteredAttendances,
-                `Presensi_SMPN2Tanjung_${filterDate || 'Semua'}.xlsx`
+                `Presensi_${(schoolSettings?.schoolName || 'SMPN1Pemenang').replace(/\s+/g, '_')}_${filterDate || 'Semua'}.xlsx`
               )
             }
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300 transition-colors cursor-pointer"
@@ -194,7 +196,8 @@ export const AttendanceTable: React.FC<AttendanceTableProps> = ({
               exportAttendanceToPDF(
                 filteredAttendances,
                 filterClass === 'SEMUA' ? 'Seluruh Kelas' : `Kelas ${filterClass}`,
-                filterDate
+                filterDate,
+                schoolSettings
               )
             }
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-semibold border border-rose-300 transition-colors cursor-pointer"

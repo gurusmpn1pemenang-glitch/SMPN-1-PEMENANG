@@ -167,7 +167,7 @@ export const TeacherManager: React.FC<TeacherManagerProps> = ({
             <span>Data Guru & Tenaga Kependidikan</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Data tenaga pendidik {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}, kartu ID QR presensi mandiri, dan pengampu mata pelajaran
+            Data tenaga pendidik {schoolSettings?.schoolName || 'SMP Negeri 1 Pemenang'}, kartu ID QR presensi mandiri, dan pengampu mata pelajaran
           </p>
         </div>
 
@@ -392,7 +392,7 @@ export const TeacherManager: React.FC<TeacherManagerProps> = ({
                 </label>
                 <input
                   type="email"
-                  placeholder="Contoh: guru@smpn2tanjung.sch.id"
+                  placeholder="Contoh: guru@smpn1pemenang.sch.id"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -428,7 +428,7 @@ export const TeacherManager: React.FC<TeacherManagerProps> = ({
             <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <School className="w-4 h-4 text-teal-400" />
-                <span>Kartu Identitas Guru {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}</span>
+                <span>Kartu Identitas Guru {schoolSettings?.schoolName || 'SMP Negeri 1 Pemenang'}</span>
               </h3>
               <button
                 onClick={() => setCardTeacher(null)}
@@ -443,13 +443,13 @@ export const TeacherManager: React.FC<TeacherManagerProps> = ({
                 {/* Header */}
                 <div className="bg-gradient-to-r from-teal-800 via-emerald-800 to-teal-900 text-white p-3.5 text-center relative border-b-2 border-amber-400">
                   <div className="font-black tracking-wider text-xs">
-                    {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 TANJUNG'}
+                    {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 PEMENANG'}
                   </div>
                   <p className="text-[9px] uppercase tracking-widest text-teal-200 font-semibold">
                     KARTU IDENTITAS GURU & PEGAWAI
                   </p>
                   <p className="text-[8px] text-teal-300">
-                    {schoolSettings?.address || 'Kec. Tanjung, Kab. Lombok Utara, NTB'}
+                    {schoolSettings?.address || 'Kec. Pemenang, Kab. Lombok Utara, NTB'}
                   </p>
                 </div>
 
@@ -508,7 +508,7 @@ export const TeacherManager: React.FC<TeacherManagerProps> = ({
                 </div>
 
                 <div className="bg-teal-950 text-teal-300 text-[8px] py-1 text-center font-medium">
-                  Kartu ini sah untuk presensi harian pendidik {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}
+                  Kartu ini sah untuk presensi harian pendidik {schoolSettings?.schoolName || 'SMP Negeri 1 Pemenang'}
                 </div>
               </div>
             </div>

@@ -1119,10 +1119,10 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                       DINAS PENDIDIKAN KEBUDAYAAN KEPEMUDAAN DAN OLAHRAGA
                     </p>
                     <h3 className="text-xs font-black text-emerald-900 tracking-wide truncate">
-                      {(identitas.schoolName || 'SMP NEGERI 2 TANJUNG').toUpperCase()}
+                      {(identitas.schoolName || 'SMP NEGERI 1 PEMENANG').toUpperCase()}
                     </h3>
                     <p className="text-[8px] text-slate-500 italic truncate">
-                      {identitas.address || 'Jl. Pariwisata Tanjung - Sire'}
+                      {identitas.address || 'Jl. Raya Pemenang, Kec. Pemenang, Kab. Lombok Utara'}
                     </p>
                     <p className="text-[8px] text-slate-500 font-mono">
                       NPSN: {identitas.npsn || '-'} • Kode Pos: {identitas.postalCode || '-'}
@@ -1344,7 +1344,7 @@ export const AdminSettingsView: React.FC<AdminSettingsViewProps> = ({
                   ai-studio-sistempresensiju-e915a2ee-fa86-4584-8525-3a5af911ac9b
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Database Firestore khusus untuk SMPN 2 Tanjung dengan sinkronisasi instan.
+                  Database Firestore khusus untuk {identitas.schoolName || 'SMP Negeri 1 Pemenang'} dengan sinkronisasi instan.
                 </p>
               </div>
 

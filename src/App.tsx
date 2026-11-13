@@ -95,6 +95,33 @@ export default function App() {
     setPendingSyncCount(queue.length);
   }, []);
 
+  // Dynamically sync browser tab title & meta tags with official school name
+  useEffect(() => {
+    const officialName = schoolSettings?.schoolName?.trim() || 'SMP Negeri 1 Pemenang';
+    document.title = `${officialName} - Sistem Presensi & Jurnal Pembelajaran`;
+
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+      metaDesc.setAttribute(
+        'content',
+        `Aplikasi presensi QR siswa & guru, kartu ID QR, jurnal pembelajaran digital, rekap otomatis bulanan, dan ekspor PDF/Excel ${officialName}.`
+      );
+    }
+
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) {
+      ogTitle.setAttribute('content', `${officialName} - Sistem Presensi & Jurnal Pembelajaran`);
+    }
+
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) {
+      ogDesc.setAttribute(
+        'content',
+        `Aplikasi presensi QR siswa & guru, kartu ID QR, jurnal pembelajaran digital, dan ekspor PDF/Excel ${officialName}.`
+      );
+    }
+  }, [schoolSettings?.schoolName]);
+
   // Initial Load & Auth Listener
   useEffect(() => {
     testConnection();
@@ -501,6 +528,7 @@ export default function App() {
                   journals={journals}
                   onNavigate={setActiveTab}
                   onOpenScanner={() => setActiveTab('scan-qr')}
+                  schoolSettings={schoolSettings}
                 />
               )}
 
@@ -512,6 +540,7 @@ export default function App() {
                   onRecordAttendance={handleRecordAttendance}
                   recordedBy={currentUser?.displayName || 'Petugas Scanner'}
                   operationalSettings={operationalSettings}
+                  schoolSettings={schoolSettings}
                 />
               )}
 
@@ -521,7 +550,8 @@ export default function App() {
                   teachers={teachers}
                   onSaveJournal={handleSaveJournal}
                   onDeleteJournal={handleDeleteJournal}
-                  currentUserName={currentUser?.displayName || 'Drs. H. Suhartono, M.Pd.'}
+                  currentUserName={currentUser?.displayName || schoolSettings.headmasterName || 'Guru / Staf'}
+                  schoolSettings={schoolSettings}
                 />
               )}
 
@@ -533,6 +563,7 @@ export default function App() {
                   onRecordAttendance={handleRecordAttendance}
                   onDeleteAttendance={handleDeleteAttendance}
                   recordedBy={currentUser?.displayName || 'Guru / Staf'}
+                  schoolSettings={schoolSettings}
                 />
               )}
 
@@ -554,6 +585,7 @@ export default function App() {
                   onSaveTeacher={handleSaveTeacher}
                   onDeleteTeacher={handleDeleteTeacher}
                   userRole={currentUser?.role || 'guru'}
+                  schoolSettings={schoolSettings}
                 />
               )}
 
@@ -562,6 +594,7 @@ export default function App() {
                   students={students}
                   attendances={attendances}
                   currentUserName={currentUser?.displayName || 'Admin Presensi'}
+                  schoolSettings={schoolSettings}
                 />
               )}
 
@@ -612,6 +645,7 @@ export default function App() {
         onClose={() => setIsProfileModalOpen(false)}
         currentUser={currentUser}
         teachers={teachers}
+        schoolSettings={schoolSettings}
         onUpdateProfile={handleUpdateTeacherProfile}
         onChangePassword={handleChangeTeacherPassword}
       />

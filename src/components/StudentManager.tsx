@@ -645,7 +645,12 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
 
           {/* Ekspor Excel */}
           <button
-            onClick={() => exportStudentsToExcel(filteredStudents)}
+            onClick={() =>
+              exportStudentsToExcel(
+                filteredStudents,
+                `Data_Siswa_${(schoolSettings?.schoolName || 'SMPN1Pemenang').replace(/\s+/g, '_')}.xlsx`
+              )
+            }
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300 transition-colors cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
@@ -1309,7 +1314,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                         {schoolSettings?.districtName ? schoolSettings.districtName.toUpperCase() : 'PEMKAB LOMBOK UTARA'} • DISDIKPORA
                       </div>
                       <div className="text-[11px] font-black tracking-tight text-white">
-                        {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 TANJUNG'}
+                        {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 PEMENANG'}
                       </div>
                     </div>
                   </div>
@@ -1373,7 +1378,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                     <div>
                       <span className="text-[6.5px] text-slate-400 font-semibold block">Tempat, Tgl Lahir</span>
                       <span className="text-slate-700 text-[8px] block truncate font-medium">
-                        {cardModalStudent.birthPlaceDate || 'Tanjung, Lombok Utara'}
+                        {cardModalStudent.birthPlaceDate || 'Pemenang, Lombok Utara'}
                       </span>
                     </div>
 
@@ -1387,7 +1392,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                     <div>
                       <span className="text-[6.5px] text-slate-400 font-semibold block">Alamat</span>
                       <span className="text-slate-600 text-[7.5px] block truncate">
-                        {cardModalStudent.address || 'Kec. Tanjung, Kab. Lombok Utara'}
+                        {cardModalStudent.address || 'Kec. Pemenang, Kab. Lombok Utara'}
                       </span>
                     </div>
                   </div>
@@ -1421,7 +1426,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                     Ukuran Standar ID Card: 8,56 cm × 5,4 cm
                   </span>
                   <span className="text-slate-400">
-                    {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMPN 1 TANJUNG'}
+                    {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMPN 1 PEMENANG'}
                   </span>
                 </div>
               </div>
@@ -1562,7 +1567,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                               {schoolSettings?.districtName ? schoolSettings.districtName.toUpperCase() : 'PEMKAB LOMBOK UTARA'} • DISDIKPORA
                             </div>
                             <div className="text-[9.5px] font-black tracking-tight text-white">
-                              {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 TANJUNG'}
+                              {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 PEMENANG'}
                             </div>
                           </div>
                         </div>
@@ -1626,7 +1631,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                           <div>
                             <span className="text-[6px] text-slate-400 font-semibold block">Tempat, Tgl Lahir</span>
                             <span className="text-slate-700 text-[7.5px] block truncate font-medium">
-                              {std.birthPlaceDate || 'Tanjung, Lombok Utara'}
+                              {std.birthPlaceDate || 'Pemenang, Lombok Utara'}
                             </span>
                           </div>
 
@@ -1640,7 +1645,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                           <div>
                             <span className="text-[6px] text-slate-400 font-semibold block">Alamat</span>
                             <span className="text-slate-600 text-[7px] block truncate">
-                              {std.address || 'Kec. Tanjung, Kab. Lombok Utara'}
+                              {std.address || 'Kec. Pemenang, Kab. Lombok Utara'}
                             </span>
                           </div>
                         </div>
@@ -1674,7 +1679,7 @@ export const StudentManager: React.FC<StudentManagerProps> = ({
                           CR-80 • 8,56 cm × 5,4 cm
                         </span>
                         <span className="text-slate-400">
-                          {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMPN 1 TANJUNG'}
+                          {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMPN 1 PEMENANG'}
                         </span>
                       </div>
                     </div>

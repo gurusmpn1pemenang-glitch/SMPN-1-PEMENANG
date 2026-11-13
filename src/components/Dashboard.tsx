@@ -324,7 +324,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 Tingkat Kehadiran Per Rombel / Kelas
               </h2>
               <p className="text-xs text-slate-500">
-                Monitoring keaktifan presensi kelas 7, 8, dan 9 {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}
+                Monitoring keaktifan presensi kelas 7, 8, dan 9 {schoolSettings?.schoolName || 'SMP Negeri 1 Pemenang'}
               </p>
             </div>
             <button

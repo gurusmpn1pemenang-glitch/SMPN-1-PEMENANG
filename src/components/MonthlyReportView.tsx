@@ -13,7 +13,7 @@ import {
   ChevronRight,
   Filter,
 } from 'lucide-react';
-import { Student, Attendance, MonthlyReport } from '../types/school';
+import { Student, Attendance, MonthlyReport, SchoolIdentitySettings } from '../types/school';
 import { exportMonthlyReportToPDF, exportAttendanceToExcel } from '../utils/exportUtils';
 import { ClassDropdown } from './ClassDropdown';
 
@@ -21,12 +21,14 @@ interface MonthlyReportViewProps {
   students: Student[];
   attendances: Attendance[];
   currentUserName: string;
+  schoolSettings?: SchoolIdentitySettings;
 }
 
 export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   students,
   attendances,
   currentUserName,
+  schoolSettings,
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>('11'); // November
   const [selectedYear, setSelectedYear] = useState<string>('2026');
@@ -108,7 +110,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
   };
 
   const handleExportPDF = () => {
-    exportMonthlyReportToPDF(reportObject, classStudents, monthAttendances);
+    exportMonthlyReportToPDF(reportObject, classStudents, monthAttendances, schoolSettings);
   };
 
   return (
@@ -130,7 +132,7 @@ export const MonthlyReportView: React.FC<MonthlyReportViewProps> = ({
             onClick={() =>
               exportAttendanceToExcel(
                 monthAttendances,
-                `Rekap_Presensi_Bulanan_${selectedClass}_${selectedMonth}_${selectedYear}.xlsx`
+                `Rekap_Presensi_${(schoolSettings?.schoolName || 'SMPN1Pemenang').replace(/\s+/g, '_')}_${selectedClass}_${selectedMonth}_${selectedYear}.xlsx`
               )
             }
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300 transition-colors cursor-pointer"

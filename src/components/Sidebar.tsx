@@ -246,7 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="font-extrabold text-sm tracking-wider text-white">
-                  {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMPN 2 TANJUNG'}
+                  {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 PEMENANG'}
                 </h1>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               </div>

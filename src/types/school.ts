@@ -121,11 +121,11 @@ export interface OperationalSettings {
 
 // Pengaturan Identitas Sekolah & Wilayah
 export interface SchoolIdentitySettings {
-  schoolName: string; // "SMP Negeri 2 Tanjung"
+  schoolName: string; // "SMP Negeri 1 Pemenang"
   npsn: string; // "50205566"
   districtName: string; // "Kabupaten Lombok Utara"
   provinceName: string; // "Nusa Tenggara Barat"
-  address: string; // "Jl. Raya Tanjung - Bayan, Sokong, Kec. Tanjung, Kab. Lombok Utara"
+  address: string; // "Jl. Raya Pemenang, Kec. Pemenang, Kab. Lombok Utara"
   postalCode: string; // "83352"
   vision: string; // Visi sekolah
   schoolLogoUrl: string; // Logo sekolah

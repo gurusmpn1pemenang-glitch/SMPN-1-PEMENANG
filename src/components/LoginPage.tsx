@@ -88,7 +88,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       if (!matchedTeacher) {
         setErrorMsg(
-          `NIP "${cleanId}" tidak ditemukan dalam daftar guru ${schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}. Pastikan NIP sudah terdaftar di Manajemen Akun.`
+          `NIP "${cleanId}" tidak ditemukan dalam daftar guru ${schoolSettings?.schoolName || 'SMP Negeri 1 Pemenang'}. Pastikan NIP sudah terdaftar di Manajemen Akun.`
         );
         setIsSubmitting(false);
         return;
@@ -107,7 +107,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       const isDefaultPassword = validPass === '123123';
       const appUser: AppUser = {
         uid: matchedTeacher.id,
-        email: matchedTeacher.email || `${matchedTeacher.nip}@guru.smpn1tanjung.sch.id`,
+        email: matchedTeacher.email || `${matchedTeacher.nip}@guru.smpn1pemenang.sch.id`,
         displayName: matchedTeacher.name,
         photoURL: matchedTeacher.photoUrl || null,
         role: 'guru',
@@ -140,7 +140,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       const kepsekUser: AppUser = {
         uid: 'user_kepsek_01',
-        email: 'kepsek@smpn1tanjung.sch.id',
+        email: 'kepsek@smpn1pemenang.sch.id',
         displayName: schoolSettings?.headmasterName || 'Drs. H. Ahmad Dahlan, M.Pd. (Kepsek)',
         photoURL: null,
         role: 'kepala_sekolah',
@@ -232,7 +232,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               {schoolSettings?.districtName || 'KABUPATEN LOMBOK UTARA'}
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {schoolSettings?.schoolName || 'SMP NEGERI 1 TANJUNG'}
+              {schoolSettings?.schoolName || 'SMP NEGERI 1 PEMENANG'}
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               Sistem Informasi Kehadiran QR & Jurnal Pembelajaran Digital
@@ -440,7 +440,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         {/* Footer info */}
         <div className="text-center text-[11px] text-slate-500 space-y-1">
           <p>
-            NPSN: {schoolSettings?.npsn || '50205566'} • {schoolSettings?.address || 'Kec. Tanjung, Kab. Lombok Utara'}
+            NPSN: {schoolSettings?.npsn || '50205566'} • {schoolSettings?.address || 'Kec. Pemenang, Kab. Lombok Utara'}
           </p>
           <div className="flex items-center justify-center gap-2 text-emerald-400 font-semibold">
             <ShieldCheck className="w-3.5 h-3.5" />

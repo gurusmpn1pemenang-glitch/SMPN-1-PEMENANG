@@ -25,6 +25,7 @@ import {
   Attendance,
   AttendanceStatus,
   OperationalSettings,
+  SchoolIdentitySettings,
 } from '../types/school';
 import { DEFAULT_OPERATIONAL_SETTINGS } from '../services/storageService';
 import { ClassDropdown } from './ClassDropdown';
@@ -37,6 +38,7 @@ interface QRScannerModalProps {
   onRecordAttendance: (att: Attendance) => Promise<void>;
   recordedBy: string;
   operationalSettings?: OperationalSettings;
+  schoolSettings?: SchoolIdentitySettings;
 }
 
 export const QRScannerModal: React.FC<QRScannerModalProps> = ({
@@ -46,6 +48,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
   onRecordAttendance,
   recordedBy,
   operationalSettings = DEFAULT_OPERATIONAL_SETTINGS,
+  schoolSettings,
 }) => {
   const [activeMode, setActiveMode] = useState<'camera' | 'manual'>('camera');
   const [manualCode, setManualCode] = useState('');
@@ -184,7 +187,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
       playBeep(false);
       setLastScannedResult({
         success: false,
-        message: `Kode QR "${cleanCode}" tidak terdaftar dalam database SMPN 2 Tanjung!`,
+        message: `Kode QR "${cleanCode}" tidak terdaftar dalam database ${schoolSettings?.schoolName || 'SMP Negeri 1 Pemenang'}!`,
       });
       return;
     }

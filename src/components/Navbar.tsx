@@ -125,7 +125,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <span className="font-bold text-sm tracking-wide block">
-                SMP NEGERI 2 TANJUNG
+                SMP NEGERI 1 PEMENANG
               </span>
               <span className="text-emerald-200 text-[11px] hidden sm:inline">
                 Unggul dalam Prestasi, Berkarakter, & Berbudaya • Kab. Lombok Utara

@@ -6,11 +6,11 @@ import { Attendance, LearningJournal, Student, MonthlyReport, SchoolIdentitySett
 
 // Default official school letterhead info
 export const DEFAULT_SCHOOL_INFO: SchoolIdentitySettings = {
-  schoolName: 'SMP NEGERI 1 TANJUNG',
+  schoolName: 'SMP NEGERI 1 PEMENANG',
   npsn: '50205566',
   districtName: 'Kabupaten Lombok Utara',
   provinceName: 'Nusa Tenggara Barat',
-  address: 'Jl. Pariwisata Tanjung - Sire, Sokong, Kec. Tanjung, Kab. Lombok Utara, NTB',
+  address: 'Jl. Raya Pemenang, Kec. Pemenang, Kab. Lombok Utara, NTB',
   postalCode: '83352',
   vision: 'Terwujudnya Peserta Didik yang Beriman, Cerdas, Terampil, Mandiri, Berkarakter, dan Berwawasan Lingkungan',
   schoolLogoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?auto=format&fit=crop&w=120&q=80',
@@ -18,8 +18,8 @@ export const DEFAULT_SCHOOL_INFO: SchoolIdentitySettings = {
   headmasterName: 'Drs. H. Suhartono, M.Pd.',
   headmasterNip: '19760812 200212 1 003',
   phone: '(0370) 6123456',
-  email: 'smpn1tanjung@gmail.com',
-  website: 'https://smpn1tanjung.sch.id',
+  email: 'smpn1pemenang@gmail.com',
+  website: 'https://smpn1pemenang.sch.id',
   updatedAt: new Date().toISOString(),
 };
 
@@ -28,10 +28,10 @@ export const SCHOOL_INFO = DEFAULT_SCHOOL_INFO;
 // ================= EXCEL TEMPLATE FOR STUDENT IMPORT =================
 /**
  * Generates and downloads the official Excel template for bulk student import
- * with mandatory column structure specified by SMPN 1 Tanjung:
+ * with mandatory column structure specified by SMPN 1 Pemenang:
  * NISN, NIS, Nama, Kelas, Jenis Kelamin, Tempat & Tanggal Lahir, Alamat, No HP Orang Tua, Nama Orang Tua, Link Drive Foto Siswa
  */
-export function downloadStudentImportTemplate(filename = 'Template_Import_Siswa_SMPN1Tanjung.xlsx') {
+export function downloadStudentImportTemplate(filename = 'Template_Import_Siswa_SMPN1Pemenang.xlsx') {
   const sampleData = [
     {
       'NISN': '0098765431',
@@ -95,7 +95,7 @@ export function downloadStudentImportTemplate(filename = 'Template_Import_Siswa_
 // ================= EXCEL EXPORTS =================
 export function exportAttendanceToExcel(
   attendances: Attendance[],
-  filename = 'Rekap_Presensi_SMPN1Tanjung.xlsx'
+  filename = 'Rekap_Presensi_SMPN1Pemenang.xlsx'
 ) {
   const data = attendances.map((att, index) => ({
     'No': index + 1,
@@ -120,7 +120,7 @@ export function exportAttendanceToExcel(
 
 export function exportJournalsToExcel(
   journals: LearningJournal[],
-  filename = 'Jurnal_Pembelajaran_SMPN1Tanjung.xlsx'
+  filename = 'Jurnal_Pembelajaran_SMPN1Pemenang.xlsx'
 ) {
   const data = journals.map((j, index) => ({
     'No': index + 1,
@@ -143,7 +143,7 @@ export function exportJournalsToExcel(
 
 export function exportStudentsToExcel(
   students: Student[],
-  filename = 'Data_Siswa_SMPN1Tanjung.xlsx'
+  filename = 'Data_Siswa_SMPN1Pemenang.xlsx'
 ) {
   const data = students.map((s, index) => ({
     'No': index + 1,
@@ -200,7 +200,7 @@ export function exportAttendanceToPDF(
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.text(schoolInfo.address, 105, 31, { align: 'center' });
-  doc.text(`Email: ${schoolInfo.email || 'smpn1tanjung@gmail.com'} | NPSN: ${schoolInfo.npsn}`, 105, 35, { align: 'center' });
+  doc.text(`Email: ${schoolInfo.email || 'smpn1pemenang@gmail.com'} | NPSN: ${schoolInfo.npsn}`, 105, 35, { align: 'center' });
 
   // Divider lines
   doc.setLineWidth(0.8);
@@ -281,7 +281,7 @@ export function exportAttendanceToPDF(
       year: 'numeric',
     });
     doc.setFontSize(8.5);
-    doc.text(`Tanjung, ${today}`, 145, finalY);
+    doc.text(`Pemenang, ${today}`, 145, finalY);
     doc.text('Mengetahui,', 145, finalY + 4);
     doc.text('Kepala Sekolah', 145, finalY + 8);
 
@@ -497,7 +497,7 @@ export function exportMonthlyReportToPDF(
   const finalY = (doc as any).lastAutoTable.finalY + 12;
   const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   doc.setFontSize(8.5);
-  doc.text(`Tanjung, ${today}`, 145, finalY);
+  doc.text(`Pemenang, ${today}`, 145, finalY);
   doc.text('Kepala Sekolah,', 145, finalY + 4);
 
   doc.setFont('helvetica', 'bold');
@@ -627,7 +627,7 @@ export async function exportKtsBatchToPdf(
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(7.5);
-    doc.text(school.schoolName || 'SMP NEGERI 1 TANJUNG', textStartX, cardY + 8);
+    doc.text(school.schoolName || 'SMP NEGERI 1 PEMENANG', textStartX, cardY + 8);
 
     doc.setTextColor(251, 191, 36); // gold
     doc.setFontSize(5.5);
@@ -693,7 +693,7 @@ export async function exportKtsBatchToPdf(
     doc.setFontSize(5.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(30, 41, 59);
-    const ttlText = student.birthPlaceDate || 'Tanjung, Lombok Utara';
+    const ttlText = student.birthPlaceDate || 'Lombok Utara, NTB';
     doc.text(ttlText.length > 24 ? ttlText.substring(0, 23) + '...' : ttlText, identX, identY + 24.5);
 
     doc.setFontSize(4.5);

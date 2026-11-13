@@ -325,7 +325,7 @@ export const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="nama@guru.smpn2tanjung.sch.id"
+                    placeholder="nama@guru.smpn1pemenang.sch.id"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                 </div>
@@ -434,13 +434,13 @@ export const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({
               <div className="w-full max-w-[340px] rounded-2xl bg-white shadow-lg overflow-hidden border border-slate-300 text-slate-800">
                 <div className="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-3.5 text-center relative border-b-2 border-amber-400">
                   <div className="font-black tracking-wider text-xs">
-                    {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 TANJUNG'}
+                    {schoolSettings?.schoolName ? schoolSettings.schoolName.toUpperCase() : 'SMP NEGERI 1 PEMENANG'}
                   </div>
                   <p className="text-[9px] uppercase tracking-widest text-teal-200 font-semibold">
                     KARTU IDENTITAS GURU & PEGAWAI
                   </p>
                   <p className="text-[8px] text-teal-300">
-                    {schoolSettings?.address || 'Kec. Tanjung, Kab. Lombok Utara, NTB'}
+                    {schoolSettings?.address || 'Kec. Pemenang, Kab. Lombok Utara, NTB'}
                   </p>
                 </div>
 
@@ -482,14 +482,14 @@ export const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({
                         Aktif Terverifikasi
                       </span>
                       <span className="text-[8px] text-slate-400 block">
-                        {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}
+                        {schoolSettings?.schoolName || 'SMP Negeri 1 Pemenang'}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-emerald-950 text-emerald-300 text-[8px] py-1 text-center font-medium">
-                  Kartu ini sah untuk presensi harian pendidik {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}
+                  Kartu ini sah untuk presensi harian pendidik {schoolSettings?.schoolName || 'SMP Negeri 1 Pemenang'}
                 </div>
               </div>
 

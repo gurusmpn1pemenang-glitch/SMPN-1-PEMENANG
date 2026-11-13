@@ -149,13 +149,18 @@ export const LearningJournalView: React.FC<LearningJournalViewProps> = ({
             <span>Jurnal Agenda Pembelajaran Guru</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Dokumentasi digital proses belajar mengajar, materi pokok, dan catatan evaluasi kelas {schoolSettings?.schoolName || 'SMP Negeri 1 Tanjung'}
+            Dokumentasi digital proses belajar mengajar, materi pokok, dan catatan evaluasi kelas {schoolSettings?.schoolName || 'SMP Negeri 1 Pemenang'}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => exportJournalsToExcel(filteredJournals)}
+            onClick={() =>
+              exportJournalsToExcel(
+                filteredJournals,
+                `Jurnal_Pembelajaran_${(schoolSettings?.schoolName || 'SMPN1Pemenang').replace(/\s+/g, '_')}.xlsx`
+              )
+            }
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300 transition-colors cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
